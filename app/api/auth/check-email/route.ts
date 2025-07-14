@@ -25,9 +25,7 @@ export async function POST(request: Request) {
     }
     
     // Check if user exists using admin API
-    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers({
-      filter: `email.eq.${email}`
-    })
+    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers()
     
     if (error) {
       console.error('Error checking email:', error)
@@ -37,7 +35,7 @@ export async function POST(request: Request) {
       )
     }
     
-    const exists = users && users.users.length > 0
+    const exists = users && users.users.some(user => user.email === email)
     
     // Don't reveal specific details about why email is unavailable
     if (exists) {

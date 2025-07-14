@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -10,7 +9,6 @@ import { Card } from '@/components/ui/Card'
 import { useAuth } from '@/providers/AuthProvider'
 
 export default function SignupPage() {
-  const router = useRouter()
   const { signUp, signInWithGoogle } = useAuth()
   const [formData, setFormData] = useState({
     name: '',

@@ -57,8 +57,9 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Protected routes that require authentication
-  const protectedRoutes = ['/dashboard', '/pomodoro', '/subjects', '/settings']
+  const protectedRoutes = ['/dashboard', '/pomodoro', '/subjects', '/settings', '/test-rls']
   const authRoutes = ['/login', '/signup']
+  const publicRoutes = ['/', '/about', '/pricing']
   
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -66,6 +67,10 @@ export async function middleware(request: NextRequest) {
   
   const isAuthRoute = authRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
+  )
+  
+  const isPublicRoute = publicRoutes.some(route => 
+    request.nextUrl.pathname === route
   )
 
   // Redirect to login if accessing protected route without auth
@@ -75,6 +80,11 @@ export async function middleware(request: NextRequest) {
 
   // Redirect to dashboard if accessing auth routes while authenticated
   if (isAuthRoute && user) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Redirect to dashboard if accessing public routes while authenticated
+  if (isPublicRoute && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
