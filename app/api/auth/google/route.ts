@@ -21,6 +21,7 @@ export async function GET() {
       { status: 500 }
     )
   } catch (error) {
+    console.error('Google OAuth error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

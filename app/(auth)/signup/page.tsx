@@ -91,6 +91,7 @@ export default function SignupPage() {
         router.push('/login?registered=true')
       }
     } catch (err) {
+      console.error('Signup error:', err)
       setErrors({ general: 'An unexpected error occurred' })
       setLoading(false)
     }
@@ -104,6 +105,7 @@ export default function SignupPage() {
         setErrors({ general: error.message })
       }
     } catch (err) {
+      console.error('Google signup error:', err)
       setErrors({ general: 'Failed to sign up with Google' })
     }
   }

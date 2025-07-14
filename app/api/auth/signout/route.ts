@@ -16,6 +16,7 @@ export async function POST() {
       message: 'Successfully signed out' 
     })
   } catch (error) {
+    console.error('Signout API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

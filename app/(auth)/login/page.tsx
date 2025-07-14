@@ -76,6 +76,7 @@ export default function LoginPage() {
         router.push('/dashboard')
       }
     } catch (err) {
+      console.error('Login error:', err)
       setErrors({ general: 'An unexpected error occurred' })
       setLoading(false)
     }
@@ -89,6 +90,7 @@ export default function LoginPage() {
         setErrors({ general: error.message })
       }
     } catch (err) {
+      console.error('Google login error:', err)
       setErrors({ general: 'Failed to sign in with Google' })
     }
   }

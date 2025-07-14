@@ -8,10 +8,10 @@ import { useRouter } from 'next/navigation'
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error?: string }>
-  signUp: (email: string, password: string, name?: string) => Promise<{ error?: string }>
+  signIn: (email: string, password: string) => Promise<{ error?: { message: string } }>
+  signUp: (email: string, password: string, metadata?: { full_name?: string }) => Promise<{ error?: { message: string } }>
   signOut: () => Promise<void>
-  signInWithGoogle: () => Promise<void>
+  signInWithGoogle: () => Promise<{ error?: { message: string } }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -54,34 +54,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json()
 
       if (!response.ok) {
-        return { error: data.error || 'Failed to sign in' }
+        return { error: { message: data.error || 'Failed to sign in' } }
       }
 
       router.push('/dashboard')
       router.refresh()
       return {}
     } catch (error) {
-      return { error: 'An unexpected error occurred' }
+      return { error: { message: 'An unexpected error occurred' } }
     }
   }
 
-  const signUp = async (email: string, password: string, name?: string) => {
+  const signUp = async (email: string, password: string, metadata?: { full_name?: string }) => {
     try {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name })
+        body: JSON.stringify({ email, password, name: metadata?.full_name })
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        return { error: data.error || 'Failed to sign up' }
+        return { error: { message: data.error || 'Failed to sign up' } }
       }
 
       return {}
     } catch (error) {
-      return { error: 'An unexpected error occurred' }
+      return { error: { message: 'An unexpected error occurred' } }
     }
   }
 
@@ -101,8 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       window.location.href = '/api/auth/google'
+      return {}
     } catch (error) {
       console.error('Error signing in with Google:', error)
+      return { error: { message: 'Failed to sign in with Google' } }
     }
   }
 

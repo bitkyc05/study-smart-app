@@ -1,5 +1,4 @@
-import { createClient, getServerClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
+import { getServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
 export async function getUser() {
@@ -29,7 +28,7 @@ export async function signIn(email: string, password: string) {
   return { data, error: null }
 }
 
-export async function signUp(email: string, password: string, metadata?: any) {
+export async function signUp(email: string, password: string, metadata?: { full_name?: string }) {
   const supabase = await getServerClient()
   
   const { data, error } = await supabase.auth.signUp({

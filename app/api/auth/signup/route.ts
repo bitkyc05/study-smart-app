@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       message: 'Please check your email to confirm your account' 
     })
   } catch (error) {
+    console.error('Signup API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

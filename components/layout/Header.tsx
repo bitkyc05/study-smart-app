@@ -2,13 +2,16 @@
 
 import { UserCircleIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
+import { useAuth } from '@/providers/AuthProvider'
 
 interface UserMenuProps {
   isOpen: boolean
   onToggle: () => void
+  onSignOut: () => void
+  userEmail?: string | null
 }
 
-function UserMenu({ isOpen, onToggle }: UserMenuProps) {
+function UserMenu({ isOpen, onToggle, onSignOut, userEmail }: UserMenuProps) {
   return (
     <div className="relative">
       <button
@@ -17,7 +20,7 @@ function UserMenu({ isOpen, onToggle }: UserMenuProps) {
       >
         <UserCircleIcon className="h-8 w-8 text-text-secondary" />
         <div className="text-left">
-          <p className="text-body-md font-medium text-text-primary">Study User</p>
+          <p className="text-body-md font-medium text-text-primary">{userEmail || 'Study User'}</p>
           <p className="text-caption text-text-secondary">Premium</p>
         </div>
       </button>
@@ -32,7 +35,10 @@ function UserMenu({ isOpen, onToggle }: UserMenuProps) {
               Settings
             </button>
             <hr className="my-1 border-accent" />
-            <button className="w-full px-4 py-2 text-left text-body-md text-text-primary hover:bg-accent-light">
+            <button 
+              onClick={onSignOut}
+              className="w-full px-4 py-2 text-left text-body-md text-text-primary hover:bg-accent-light"
+            >
               Sign out
             </button>
           </div>
@@ -44,6 +50,7 @@ function UserMenu({ isOpen, onToggle }: UserMenuProps) {
 
 export function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const { user, signOut } = useAuth()
   
   const today = new Date()
   const formattedDate = today.toLocaleDateString('en-US', { 
@@ -52,6 +59,11 @@ export function Header() {
     month: 'long', 
     day: 'numeric' 
   })
+  
+  const handleSignOut = async () => {
+    await signOut()
+    setIsUserMenuOpen(false)
+  }
 
   return (
     <header className="bg-white border-b border-accent px-6 py-4">
@@ -74,7 +86,9 @@ export function Header() {
           
           <UserMenu 
             isOpen={isUserMenuOpen} 
-            onToggle={() => setIsUserMenuOpen(!isUserMenuOpen)} 
+            onToggle={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            onSignOut={handleSignOut}
+            userEmail={user?.email}
           />
         </div>
       </div>
