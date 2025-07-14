@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const [errors, setErrors] = useState<{
     email?: string
     password?: string
@@ -33,8 +34,7 @@ export default function LoginPage() {
     }
     
     if (registered === 'true') {
-      // You can show a success message here
-      // For now, we'll just let the user know they can log in
+      setSuccessMessage('Registration successful! Please check your email to confirm your account before logging in.')
     }
   }, [])
 
@@ -69,7 +69,12 @@ export default function LoginPage() {
       const { error } = await signIn(email, password)
       
       if (error) {
-        setErrors({ general: error.message })
+        // Check if error is due to unconfirmed email
+        if (error.message.includes('Email not confirmed')) {
+          setErrors({ general: 'Please confirm your email before logging in. Check your inbox for the confirmation link.' })
+        } else {
+          setErrors({ general: error.message })
+        }
         setLoading(false)
       } else {
         // Success - will redirect automatically via middleware
@@ -109,6 +114,12 @@ export default function LoginPage() {
       {errors.general && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
           <p className="text-sm">{errors.general}</p>
+        </div>
+      )}
+      
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md mb-6">
+          <p className="text-sm">{successMessage}</p>
         </div>
       )}
 

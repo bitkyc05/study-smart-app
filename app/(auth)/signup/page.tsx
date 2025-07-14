@@ -20,6 +20,9 @@ export default function SignupPage() {
   })
   const [agreeToTerms, setAgreeToTerms] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [checkingEmail, setCheckingEmail] = useState(false)
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null)
+  const [successMessage, setSuccessMessage] = useState('')
   const [errors, setErrors] = useState<{
     name?: string
     email?: string
@@ -34,6 +37,45 @@ export default function SignupPage() {
       ...prev,
       [field]: e.target.value
     }))
+    // Reset email availability when email changes
+    if (field === 'email') {
+      setEmailAvailable(null)
+      setErrors(prev => ({ ...prev, email: undefined }))
+    }
+  }
+  
+  const checkEmailAvailability = async () => {
+    if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) {
+      setErrors(prev => ({ ...prev, email: 'Please enter a valid email' }))
+      return
+    }
+    
+    setCheckingEmail(true)
+    try {
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok) {
+        setEmailAvailable(data.available)
+        if (!data.available) {
+          setErrors(prev => ({ ...prev, email: data.message }))
+        } else {
+          setErrors(prev => ({ ...prev, email: undefined }))
+        }
+      } else {
+        setErrors(prev => ({ ...prev, email: 'Failed to check email availability' }))
+      }
+    } catch (error) {
+      console.error('Email check error:', error)
+      setErrors(prev => ({ ...prev, email: 'Failed to check email availability' }))
+    } finally {
+      setCheckingEmail(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,6 +95,10 @@ export default function SignupPage() {
       newErrors.email = 'Email is required'
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid'
+    } else if (emailAvailable === false) {
+      newErrors.email = 'This email is already in use'
+    } else if (emailAvailable === null) {
+      newErrors.email = 'Please check email availability first'
     }
     
     if (!formData.password) {
@@ -87,8 +133,18 @@ export default function SignupPage() {
         setErrors({ general: error.message })
         setLoading(false)
       } else {
-        // Show success message or redirect
-        router.push('/login?registered=true')
+        // Show success message but don't redirect
+        setSuccessMessage('Please check your email to confirm your account before logging in.')
+        setErrors({})
+        setLoading(false)
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: ''
+        })
+        setAgreeToTerms(false)
       }
     } catch (err) {
       console.error('Signup error:', err)
@@ -126,6 +182,12 @@ export default function SignupPage() {
           <p className="text-sm">{errors.general}</p>
         </div>
       )}
+      
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md mb-6">
+          <p className="text-sm">{successMessage}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <Input
@@ -144,21 +206,38 @@ export default function SignupPage() {
           }
         />
 
-        <Input
-          id="email"
-          type="email"
-          label="Email"
-          placeholder="Enter your email"
-          value={formData.email}
-          onChange={handleInputChange('email')}
-          error={errors.email}
-          autoComplete="email"
-          icon={
-            <svg className="h-5 w-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-            </svg>
-          }
-        />
+        <div className="space-y-2">
+          <div className="relative">
+            <Input
+              id="email"
+              type="email"
+              label="Email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleInputChange('email')}
+              error={errors.email}
+              autoComplete="email"
+              icon={
+                <svg className="h-5 w-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                </svg>
+              }
+            />
+            {formData.email && emailAvailable === null && (
+              <button
+                type="button"
+                onClick={checkEmailAvailability}
+                disabled={checkingEmail}
+                className="absolute right-2 top-9 text-sm text-accent-primary hover:text-accent-primary-focus disabled:text-text-secondary"
+              >
+                {checkingEmail ? 'Checking...' : 'Check availability'}
+              </button>
+            )}
+          </div>
+          {emailAvailable === true && (
+            <p className="text-sm text-green-600 ml-1">✓ Email is available</p>
+          )}
+        </div>
 
         <Input
           id="password"
