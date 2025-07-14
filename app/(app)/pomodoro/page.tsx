@@ -109,21 +109,21 @@ export default function PomodoroPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {isLoading ? (
             <div className="text-text-secondary">로딩 중...</div>
-          ) : subjects.length === 0 ? (
-            <div className="text-text-secondary col-span-full">
-              과목을 먼저 추가해주세요
-            </div>
           ) : (
             <>
               <button
                 onClick={() => setSelectedSubjectId(null)}
-                className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                className={`px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-2 ${
                   selectedSubjectId === null
                     ? 'border-accent-focus bg-accent-light'
                     : 'border-accent hover:border-accent-focus'
                 }`}
               >
-                <span className="text-body-md">선택 안함</span>
+                <div 
+                  className="w-4 h-4 rounded-full"
+                  style={{ backgroundColor: '#9E9E9E' }}
+                />
+                <span className="text-body-md">기타(Etc)</span>
               </button>
               {subjects.map((subject) => (
                 <button
@@ -175,7 +175,7 @@ export default function PomodoroPage() {
                   />
                   <div>
                     <p className="text-body-md font-medium text-text-primary">
-                      {session.subjects?.name || '과목 없음'}
+                      {session.subjects?.name || '기타(Etc)'}
                     </p>
                     <p className="text-caption text-text-secondary">
                       {formatCompletedTime(session.end_time)} 완료

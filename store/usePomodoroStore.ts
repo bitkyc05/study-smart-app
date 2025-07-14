@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { subscribeWithSelector } from 'zustand/middleware'
 import type { 
   PomodoroStore, 
   TimerState, 
@@ -25,20 +24,19 @@ const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   breakMessage: '휴식 시간입니다!'
 }
 
-export const usePomodoroStore = create<PomodoroStore>()(
-  subscribeWithSelector((set, get) => ({
+export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
     // Initial state
     state: 'idle' as TimerState,
     sessionType: 'study',
     subjectId: null,
     settingDuration: DEFAULT_SETTINGS.studyDuration,
-    timeRemaining: 0,
+    timeRemaining: DEFAULT_SETTINGS.studyDuration,
     overtimeElapsed: 0,
-    dialAngle: 0,
+    dialAngle: (DEFAULT_SETTINGS.studyDuration / 3600) * 360, // 초기값도 60분 기준
     dialDirection: 'ccw',
     lastRenderTick: 0,
     completedRings: 0,
-    currentRingAngle: 0,
+    currentRingAngle: (DEFAULT_SETTINGS.studyDuration / 3600) * 360,
     workerRef: null,
     settings: DEFAULT_SETTINGS,
     notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
@@ -48,6 +46,8 @@ export const usePomodoroStore = create<PomodoroStore>()(
         const { state, workerRef, settings } = get()
         if (state !== 'idle') return
         
+        const initialAngle = (settings.studyDuration / 3600) * 360 // 60분 기준으로 각도 계산
+        
         set({
           state: 'countdown',
           sessionType: 'study',
@@ -55,10 +55,10 @@ export const usePomodoroStore = create<PomodoroStore>()(
           settingDuration: settings.studyDuration,
           timeRemaining: settings.studyDuration,
           overtimeElapsed: 0,
-          dialAngle: 0,
+          dialAngle: initialAngle, // 25분이면 150도
           dialDirection: 'ccw',
           completedRings: 0,
-          currentRingAngle: 0
+          currentRingAngle: initialAngle
         })
         
         workerRef?.postMessage({
@@ -74,6 +74,8 @@ export const usePomodoroStore = create<PomodoroStore>()(
         
         const breakDuration = settings.shortBreakDuration // TODO: 긴 휴식 로직 추가
         
+        const initialAngle = (breakDuration / 3600) * 360 // 60분 기준으로 각도 계산
+        
         set({
           state: 'countdown',
           sessionType: 'break',
@@ -81,10 +83,10 @@ export const usePomodoroStore = create<PomodoroStore>()(
           settingDuration: breakDuration,
           timeRemaining: breakDuration,
           overtimeElapsed: 0,
-          dialAngle: 0,
+          dialAngle: initialAngle, // 5분이면 30도
           dialDirection: 'ccw',
           completedRings: 0,
-          currentRingAngle: 0
+          currentRingAngle: initialAngle
         })
         
         workerRef?.postMessage({
@@ -126,10 +128,17 @@ export const usePomodoroStore = create<PomodoroStore>()(
       },
       
       stop: async () => {
-        const { state, sessionType, overtimeElapsed, settingDuration, subjectId, workerRef } = get()
-        if (state !== 'overtime' && state !== 'breakOvertime') return
+        const { state, sessionType, overtimeElapsed, settingDuration, subjectId, workerRef, timeRemaining } = get()
         
-        const totalDuration = settingDuration + overtimeElapsed
+        // 휴식 중이거나 초과시간 상태일 때만 stop 가능
+        if (!(sessionType === 'break' && state === 'countdown') && 
+            state !== 'overtime' && 
+            state !== 'breakOvertime') return
+        
+        // 휴식 중이면 경과시간 계산, 초과시간이면 기존 로직
+        const totalDuration = sessionType === 'break' && state === 'countdown' 
+          ? settingDuration - timeRemaining 
+          : settingDuration + overtimeElapsed
         
         // 세션 기록 저장
         try {
@@ -161,12 +170,17 @@ export const usePomodoroStore = create<PomodoroStore>()(
           console.error('Error saving session:', error)
         }
         
+        const { settings } = get()
+        const initialDuration = sessionType === 'study' ? settings.studyDuration : settings.shortBreakDuration
+        const initialAngle = (initialDuration / 3600) * 360
+        
         set({
           state: 'idle',
+          timeRemaining: initialDuration,
           overtimeElapsed: 0,
-          dialAngle: 0,
+          dialAngle: initialAngle,
           completedRings: 0,
-          currentRingAngle: 0
+          currentRingAngle: initialAngle
         })
         
         workerRef?.postMessage({ command: 'stop' })
@@ -176,15 +190,16 @@ export const usePomodoroStore = create<PomodoroStore>()(
         const { type, data } = message
         
         switch (type) {
+          case 'started':
+            // Worker 시작 확인 메시지
+            console.log('Timer started:', data)
+            break
+            
           case 'tick':
             if (data?.timeRemaining !== undefined) {
               set({ timeRemaining: data.timeRemaining })
-              
-              // 10초마다 다이얼 각도 업데이트
-              if (Date.now() - get().lastRenderTick > 10000) {
-                get().actions.updateDialAngle()
-                set({ lastRenderTick: Date.now() })
-              }
+              // 매 tick마다 다이얼 각도 업데이트
+              get().actions.updateDialAngle()
             }
             break
             
@@ -206,11 +221,8 @@ export const usePomodoroStore = create<PomodoroStore>()(
           case 'overtime_tick':
             if (data?.overtimeElapsed !== undefined) {
               set({ overtimeElapsed: data.overtimeElapsed })
-              
-              if (Date.now() - get().lastRenderTick > 10000) {
-                get().actions.updateDialAngle()
-                set({ lastRenderTick: Date.now() })
-              }
+              // 매 tick마다 다이얼 각도 업데이트
+              get().actions.updateDialAngle()
             }
             break
 
@@ -237,18 +249,17 @@ export const usePomodoroStore = create<PomodoroStore>()(
         const baseUnit = 60 * 60 // 60분 기준
         
         if (state === 'countdown' || state === 'paused') {
-          // 카운트다운: 0° → 360° (채우기)
-          const totalSeconds = Math.min(settingDuration, baseUnit)
-          const elapsedSeconds = totalSeconds - Math.min(timeRemaining, baseUnit)
-          const angle = (elapsedSeconds / baseUnit) * 360
+          // 카운트다운: 설정시간 각도 → 0° (비우기 - 반시계방향)
+          // 60분 원 기준으로 남은 시간의 각도 계산
+          const angle = (timeRemaining / baseUnit) * 360
           
           // 60분 초과 처리
           const currentRing = Math.floor((settingDuration - timeRemaining) / baseUnit)
-          const remainingInCurrentRing = (settingDuration - timeRemaining) % baseUnit
+          const remainingInCurrentRing = timeRemaining % baseUnit
           const currentAngle = (remainingInCurrentRing / baseUnit) * 360
           
           set({ 
-            dialAngle: settingDuration <= baseUnit ? angle : 360,
+            dialAngle: angle,
             completedRings: currentRing,
             currentRingAngle: currentAngle
           })
@@ -271,15 +282,22 @@ export const usePomodoroStore = create<PomodoroStore>()(
         const baseUnit = 60 * 60 // 60분
         
         let totalSeconds = 0
-        if (state === 'countdown' || state === 'paused') {
+        let displaySeconds = 0
+        
+        if (state === 'idle') {
+          // idle 상태에서는 설정된 시간을 표시
+          displaySeconds = timeRemaining
+        } else if (state === 'countdown' || state === 'paused') {
           totalSeconds = settingDuration - timeRemaining
+          displaySeconds = timeRemaining
         } else if (state === 'overtime' || state === 'breakOvertime') {
           totalSeconds = settingDuration + overtimeElapsed
+          displaySeconds = overtimeElapsed
         }
         
-        const hours = Math.floor(totalSeconds / 3600)
-        const minutes = Math.floor((totalSeconds % 3600) / 60)
-        const seconds = totalSeconds % 60
+        const hours = Math.floor(displaySeconds / 3600)
+        const minutes = Math.floor((displaySeconds % 3600) / 60)
+        const seconds = displaySeconds % 60
         
         const displayTime = hours > 0 
           ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
@@ -305,25 +323,32 @@ export const usePomodoroStore = create<PomodoroStore>()(
             set({ state: 'idle' })
           }
           
+          console.log('Worker initialized')
+          
           set({ workerRef: worker })
         }
       },
 
       updateSettings: (newSettings) => {
-        set({ settings: { ...get().settings, ...newSettings } })
+        const currentSettings = get().settings
+        const newSettingsObj = { ...currentSettings, ...newSettings }
+        set({ settings: newSettingsObj })
         
         // 현재 idle 상태라면 시간 업데이트
         if (get().state === 'idle') {
           const duration = get().sessionType === 'study' 
-            ? newSettings.studyDuration || get().settings.studyDuration
-            : newSettings.shortBreakDuration || get().settings.shortBreakDuration
+            ? newSettingsObj.studyDuration
+            : newSettingsObj.shortBreakDuration
+          
+          const angle = (duration / 3600) * 360 // 60분 기준 각도
           
           set({ 
             settingDuration: duration,
-            timeRemaining: duration 
+            timeRemaining: duration,
+            dialAngle: angle,
+            currentRingAngle: angle
           })
         }
       }
     }
   }))
-)

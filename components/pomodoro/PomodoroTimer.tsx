@@ -11,7 +11,7 @@ interface PomodoroTimerProps {
 }
 
 export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
-  const { state } = usePomodoroStore()
+  const { state, settings, sessionType } = usePomodoroStore()
   const { 
     startStudy, 
     startBreak, 
@@ -19,7 +19,8 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
     resume, 
     reset, 
     stop,
-    initializeWorker 
+    initializeWorker,
+    updateSettings 
   } = usePomodoroStore(state => state.actions)
   
   // Worker 초기화
@@ -41,8 +42,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
         return (
           <>
             <Button 
-              onClick={() => startStudy(subjectId || 'default')}
-              disabled={!subjectId}
+              onClick={() => startStudy(subjectId || null)}
               className="flex items-center gap-2"
               size="lg"
             >
@@ -60,6 +60,20 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
         )
       
       case 'countdown':
+        // 휴식 중에는 정지 버튼만 표시
+        if (sessionType === 'break') {
+          return (
+            <Button 
+              onClick={stop}
+              variant="primary"
+              className="flex items-center gap-2"
+              size="lg"
+            >
+              정지
+            </Button>
+          )
+        }
+        // 공부 중에는 일시정지와 리셋 버튼 표시
         return (
           <>
             <Button 
@@ -123,6 +137,42 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
   return (
     <Card className="max-w-md mx-auto p-8">
       <div className="space-y-8">
+        {/* 시간 설정 - idle 상태일 때만 표시 */}
+        {state === 'idle' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <label className="text-body-md text-text-primary">학습 시간</label>
+              <select
+                value={settings.studyDuration}
+                onChange={(e) => updateSettings({ studyDuration: Number(e.target.value) })}
+                className="px-4 py-2 border border-accent rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-focus"
+              >
+                <option value={10}>10초 (테스트)</option>
+                <option value={900}>15분</option>
+                <option value={1200}>20분</option>
+                <option value={1500}>25분</option>
+                <option value={1800}>30분</option>
+                <option value={2700}>45분</option>
+                <option value={3600}>60분</option>
+              </select>
+            </div>
+            <div className="flex justify-between items-center">
+              <label className="text-body-md text-text-primary">휴식 시간</label>
+              <select
+                value={settings.shortBreakDuration}
+                onChange={(e) => updateSettings({ shortBreakDuration: Number(e.target.value) })}
+                className="px-4 py-2 border border-accent rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-focus"
+              >
+                <option value={10}>10초 (테스트)</option>
+                <option value={300}>5분</option>
+                <option value={600}>10분</option>
+                <option value={900}>15분</option>
+                <option value={1200}>20분</option>
+              </select>
+            </div>
+          </div>
+        )}
+        
         {/* 원형 타이머 */}
         <div className="flex justify-center">
           <CircularTimer />
@@ -134,9 +184,9 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
         </div>
         
         {/* 세션 타입 표시 */}
-        {state === 'idle' && (
+        {state === 'idle' && subjectId === null && (
           <div className="text-center text-sm text-text-secondary">
-            {!subjectId && '과목을 선택하면 공부 시간이 기록됩니다'}
+            기타(Etc)로 공부 시간이 기록됩니다
           </div>
         )}
       </div>

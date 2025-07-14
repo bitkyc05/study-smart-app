@@ -84,7 +84,7 @@ export interface SessionRecord {
 // Store Action Types
 export interface PomodoroActions {
   // User actions (State transitions)
-  startStudy: (subjectId: string) => void
+  startStudy: (subjectId: string | null) => void
   startBreak: () => void
   pause: () => void
   resume: () => void
