@@ -1,106 +1,194 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
+import { PomodoroTimer } from '@/components/pomodoro/PomodoroTimer'
+import { createClient } from '@/lib/supabase/client'
+
+interface Subject {
+  id: number
+  name: string
+  color_hex: string | null
+}
+
+interface Session {
+  id: number
+  subject_id: number | null
+  duration_seconds: number
+  end_time: string
+  subjects?: {
+    name: string
+    color_hex: string | null
+  }
+}
 
 export default function PomodoroPage() {
+  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null)
+  const [todaySessions, setTodaySessions] = useState<Session[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetchSubjects()
+    fetchTodaySessions()
+  }, [])
+
+  const fetchSubjects = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) return
+
+    const { data, error } = await supabase
+      .from('subjects')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('name')
+
+    if (!error && data) {
+      setSubjects(data)
+    }
+    setIsLoading(false)
+  }
+
+  const fetchTodaySessions = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) return
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const { data, error } = await supabase
+      .from('study_sessions')
+      .select(`
+        id,
+        subject_id,
+        duration_seconds,
+        end_time,
+        subjects (
+          name,
+          color_hex
+        )
+      `)
+      .eq('user_id', user.id)
+      .gte('end_time', today.toISOString())
+      .order('end_time', { ascending: false })
+
+    if (!error && data) {
+      setTodaySessions(data as Session[])
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    
+    if (hours > 0) {
+      return `${hours}시간 ${minutes}분`
+    }
+    return `${minutes}분`
+  }
+
+  const formatCompletedTime = (timestamp: string) => {
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString('ko-KR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <Card className="text-center">
-        <div className="mb-8">
-          <h2 className="font-serif text-display-md text-text-primary mb-2">
-            Pomodoro Timer
-          </h2>
-          <p className="text-body-md text-text-secondary">
-            Focus session with subject selection
-          </p>
-        </div>
-        
-        <div className="mb-8">
-          <div className="relative flex items-center justify-center mb-4">
-            <svg className="w-64 h-64 sm:w-72 sm:h-72 md:w-80 md:h-80 transform -rotate-90" viewBox="0 0 200 200">
-              <circle
-                cx="100"
-                cy="100"
-                r="85"
-                fill="none"
-                stroke="var(--accent-light)"
-                strokeWidth="8"
-              />
-              <circle
-                cx="100"
-                cy="100"
-                r="85"
-                fill="none"
-                stroke="var(--accent-primary)"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray="534"
-                strokeDashoffset="133"
-                className="transition-all duration-1000 ease-in-out"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-3xl sm:text-4xl md:text-5xl font-light text-text-primary">25:00</div>
-                <div className="text-body-md text-text-secondary mt-2">Focus Session</div>
-              </div>
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* 과목 선택 */}
+      <Card>
+        <h2 className="font-serif text-heading-lg text-text-primary mb-4">
+          과목 선택
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {isLoading ? (
+            <div className="text-text-secondary">로딩 중...</div>
+          ) : subjects.length === 0 ? (
+            <div className="text-text-secondary col-span-full">
+              과목을 먼저 추가해주세요
             </div>
-          </div>
-        </div>
-        
-        <div className="mb-8">
-          <select className="w-full px-4 py-2 border border-accent rounded-lg text-body-md text-text-primary bg-white focus:outline-none focus:ring-2 focus:ring-accent-focus">
-            <option>Others (Select Sessions)</option>
-            <option>Mathematics</option>
-            <option>Physics</option>
-            <option>Chemistry</option>
-            <option>Biology</option>
-            <option>Others</option>
-          </select>
-        </div>
-        
-        <div className="flex justify-center space-x-4">
-          <button className="px-6 py-3 bg-accent-focus text-white rounded-lg text-body-lg font-medium hover:bg-accent-dark transition-colors">
-            Start
-          </button>
-          <button className="px-6 py-3 bg-accent text-text-primary rounded-lg text-body-lg font-medium hover:bg-accent-dark transition-colors">
-            Reset
-          </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setSelectedSubjectId(null)}
+                className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                  selectedSubjectId === null
+                    ? 'border-accent-focus bg-accent-light'
+                    : 'border-accent hover:border-accent-focus'
+                }`}
+              >
+                <span className="text-body-md">선택 안함</span>
+              </button>
+              {subjects.map((subject) => (
+                <button
+                  key={subject.id}
+                  onClick={() => setSelectedSubjectId(subject.id)}
+                  className={`px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                    selectedSubjectId === subject.id
+                      ? 'border-accent-focus bg-accent-light'
+                      : 'border-accent hover:border-accent-focus'
+                  }`}
+                >
+                  <div 
+                    className="w-4 h-4 rounded-full"
+                    style={{ backgroundColor: subject.color_hex || '#5D737E' }}
+                  />
+                  <span className="text-body-md">{subject.name}</span>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </Card>
+
+      {/* 타이머 */}
+      <PomodoroTimer subjectId={selectedSubjectId?.toString()} />
       
+      {/* 오늘의 세션 */}
       <Card>
-        <h3 className="font-sans text-heading-lg mb-4 text-text-primary">Today&apos;s Sessions</h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between py-3 border-b border-accent">
-            <div className="flex items-center space-x-3">
-              <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-              <div>
-                <p className="text-body-md font-medium text-text-primary">Mathematics</p>
-                <p className="text-caption text-text-secondary">Completed at 2:30 PM</p>
+        <h3 className="font-sans text-heading-lg mb-4 text-text-primary">
+          오늘의 학습 기록
+        </h3>
+        {todaySessions.length === 0 ? (
+          <p className="text-text-secondary text-center py-8">
+            아직 학습 기록이 없습니다
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {todaySessions.map((session, index) => (
+              <div 
+                key={session.id}
+                className={`flex items-center justify-between py-3 ${
+                  index < todaySessions.length - 1 ? 'border-b border-accent' : ''
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div 
+                    className="w-4 h-4 rounded-full"
+                    style={{ backgroundColor: session.subjects?.color_hex || '#5D737E' }}
+                  />
+                  <div>
+                    <p className="text-body-md font-medium text-text-primary">
+                      {session.subjects?.name || '과목 없음'}
+                    </p>
+                    <p className="text-caption text-text-secondary">
+                      {formatCompletedTime(session.end_time)} 완료
+                    </p>
+                  </div>
+                </div>
+                <span className="text-body-md text-text-primary">
+                  {formatTime(session.duration_seconds)}
+                </span>
               </div>
-            </div>
-            <span className="text-body-md text-text-primary">25 min</span>
+            ))}
           </div>
-          <div className="flex items-center justify-between py-3 border-b border-accent">
-            <div className="flex items-center space-x-3">
-              <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-              <div>
-                <p className="text-body-md font-medium text-text-primary">Physics</p>
-                <p className="text-caption text-text-secondary">Completed at 1:00 PM</p>
-              </div>
-            </div>
-            <span className="text-body-md text-text-primary">25 min</span>
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-              <div>
-                <p className="text-body-md font-medium text-text-primary">Chemistry</p>
-                <p className="text-caption text-text-secondary">Completed at 11:30 AM</p>
-              </div>
-            </div>
-            <span className="text-body-md text-text-primary">25 min</span>
-          </div>
-        </div>
+        )}
       </Card>
     </div>
   )
