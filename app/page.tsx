@@ -12,8 +12,8 @@ export default function HeroPage() {
           <Link href="/pricing" className="text-body-md text-text-secondary hover:text-accent-focus transition-colors">
             Pricing
           </Link>
-          <Link href="/dashboard" className="px-4 py-2 bg-accent-focus text-white rounded-lg text-body-md font-medium hover:bg-accent-dark transition-colors">
-            Get Started
+          <Link href="/login" className="px-4 py-2 bg-accent-focus text-white rounded-lg text-body-md font-medium hover:bg-accent-dark transition-colors">
+            Login
           </Link>
         </div>
       </nav>
@@ -29,7 +29,7 @@ export default function HeroPage() {
                 Enhance your learning with intelligent time management and focused study sessions using the Pomodoro technique
               </p>
               <Link 
-                href="/dashboard" 
+                href="/login" 
                 className="inline-block px-8 py-3 bg-accent-primary text-white rounded-lg text-body-lg font-medium hover:bg-accent-primary-focus transition-colors"
               >
                 Start Learning
