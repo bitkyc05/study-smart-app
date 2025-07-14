@@ -1,13 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --background: #F5F1E8;
-  --text-primary: #4E443A;
+  /* Base & Text - 종이 느낌 유지하면서 개선 */
+  --background: #F9F6F0;
+  --text-primary: #403A32;
   --text-secondary: #8A7E70;
-  --accent: #D4C8B4;
-  --accent-focus: #A2937E;
+  
+  /* UI & Accents - 모던한 느낌 추가 */
+  --border-subtle: #EAE2D4;
+  --accent-primary: #5D737E;
+  --accent-primary-focus: #475861;
   --accent-light: #E8E0D1;
   --accent-dark: #9B8B7A;
+  
+  /* Semantic Colors - 톤앤매너 유지 */
+  --color-success: #5A8B72;
+  --color-warning: #D8A25D;
+  --color-error: #C96E6E;
+  --color-info: #5D737E;
+  
+  /* Surface & Utilities */
+  --surface: #FFFFFF;
+  --shadow: rgba(0, 0, 0, 0.08);
 }
 
 @theme inline {
@@ -15,10 +29,17 @@
   --color-background: var(--background);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
-  --color-accent: var(--accent);
-  --color-accent-focus: var(--accent-focus);
+  --color-accent: var(--border-subtle);
+  --color-accent-focus: var(--accent-primary);
   --color-accent-light: var(--accent-light);
   --color-accent-dark: var(--accent-dark);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-primary-focus: var(--accent-primary-focus);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --color-surface: var(--surface);
   
   /* Typography */
   --font-sans: var(--font-inter);

@@ -6,8 +6,8 @@ export default function DashboardPage() {
       <div className="grid md:grid-cols-3 gap-6">
         <Card>
           <h3 className="font-sans text-heading-lg mb-2 text-text-primary">Total Study Time</h3>
-          <p className="text-display-md font-light text-text-primary">4h 32m</p>
-          <p className="text-caption text-text-secondary">Today</p>
+          <p className="text-display-md font-light text-text-primary">28h 45m</p>
+          <p className="text-caption text-text-secondary">Since D-Day Setup</p>
         </Card>
         
         <Card>

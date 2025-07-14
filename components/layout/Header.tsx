@@ -60,20 +60,16 @@ export function Header() {
           <p className="text-caption text-text-secondary">
             {formattedDate}
           </p>
-          <p className="text-heading-md font-medium text-text-primary">
-            Welcome back! Ready to study?
-          </p>
         </div>
         
         <div className="flex items-center space-x-6">
-          <div className="text-right">
-            <div className="flex items-center space-x-2">
-              <div className="w-20 bg-accent rounded-full h-2">
-                <div className="bg-accent-focus rounded-full h-2 w-[85%] transition-all duration-300"></div>
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="px-3 py-1 bg-accent-primary rounded-full">
+                <span className="text-body-md font-medium text-white">D-15</span>
               </div>
-              <span className="text-body-md font-medium text-text-primary">85%</span>
             </div>
-            <p className="text-caption text-text-secondary mt-1">Weekly Goal</p>
+            <p className="text-caption text-text-secondary mt-1">D-DAY</p>
           </div>
           
           <UserMenu 

@@ -6,7 +6,9 @@ import {
   HomeIcon, 
   ClockIcon, 
   CalendarDaysIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline'
 
 const sidebarItems = [
@@ -21,9 +23,10 @@ interface SidebarItemProps {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   href: string
   isActive: boolean
+  isCollapsed: boolean
 }
 
-function SidebarItem({ name, icon: Icon, href, isActive }: SidebarItemProps) {
+function SidebarItem({ name, icon: Icon, href, isActive, isCollapsed }: SidebarItemProps) {
   return (
     <Link
       href={href}
@@ -34,25 +37,55 @@ function SidebarItem({ name, icon: Icon, href, isActive }: SidebarItemProps) {
           : 'text-text-secondary hover:bg-accent-light hover:text-text-primary'
         }
       `}
+      title={isCollapsed ? name : undefined}
     >
-      <Icon className="h-5 w-5 mr-3" />
-      {name}
+      <Icon className="h-5 w-5 mr-3 flex-shrink-0" />
+      {!isCollapsed && <span className="truncate">{name}</span>}
     </Link>
   )
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isCollapsed: boolean
+  onToggle: () => void
+}
+
+export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
 
   return (
-    <div className="fixed inset-y-0 left-0 w-64 bg-background border-r border-accent shadow-sm">
+    <div className={`fixed inset-y-0 left-0 bg-background border-r border-accent shadow-sm transition-all duration-300 ${
+      isCollapsed ? 'w-16' : 'w-64'
+    }`}>
+      {/* 접기/펼치기 버튼 */}
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-6 bg-background border border-accent rounded-full p-1 shadow-sm hover:bg-accent-light transition-colors"
+      >
+        {isCollapsed ? (
+          <ChevronRightIcon className="h-4 w-4 text-text-secondary" />
+        ) : (
+          <ChevronLeftIcon className="h-4 w-4 text-text-secondary" />
+        )}
+      </button>
+
       <div className="p-6">
-        <h1 className="font-serif text-display-md text-text-primary">
-          Study Smart
-        </h1>
-        <p className="text-caption text-text-secondary mt-1">
-          Intelligent Time Management
-        </p>
+        {!isCollapsed ? (
+          <>
+            <h1 className="font-serif text-display-md text-text-primary">
+              Study Smart
+            </h1>
+            <p className="text-caption text-text-secondary mt-1">
+              Intelligent Time Management
+            </p>
+          </>
+        ) : (
+          <div className="text-center">
+            <div className="w-8 h-8 mx-auto bg-accent-primary rounded-full flex items-center justify-center">
+              <span className="font-serif text-lg font-bold text-white">S</span>
+            </div>
+          </div>
+        )}
       </div>
       
       <nav className="mt-8">
@@ -63,17 +96,20 @@ export function Sidebar() {
             icon={item.icon}
             href={item.href}
             isActive={pathname === item.href}
+            isCollapsed={isCollapsed}
           />
         ))}
       </nav>
       
-      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-accent">
-        <div className="text-center">
-          <p className="text-caption text-text-secondary">
-            Focus • Progress • Success
-          </p>
+      {!isCollapsed && (
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-accent">
+          <div className="text-center">
+            <p className="text-caption text-text-secondary">
+              Focus • Progress • Success
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
