@@ -1,7 +1,12 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export const createClient = (cookieStore: any) => {
+interface CookieStore {
+  get: (name: string) => { value: string } | undefined
+  set: (cookie: { name: string; value: string; [key: string]: unknown }) => void
+}
+
+export const createClient = (cookieStore: CookieStore) => {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -13,7 +18,7 @@ export const createClient = (cookieStore: any) => {
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options })
-          } catch (error) {
+          } catch {
             // The `set` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
             // user sessions.
@@ -22,7 +27,7 @@ export const createClient = (cookieStore: any) => {
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
+          } catch {
             // The `delete` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
             // user sessions.
@@ -33,7 +38,7 @@ export const createClient = (cookieStore: any) => {
   )
 }
 
-export const getServerClient = () => {
-  const cookieStore = cookies()
+export const getServerClient = async () => {
+  const cookieStore = await cookies()
   return createClient(cookieStore)
 }

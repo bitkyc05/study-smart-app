@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import { 
   HomeIcon, 
   ClockIcon, 
-  CalendarIcon, 
   CalendarDaysIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline'

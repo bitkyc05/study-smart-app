@@ -41,7 +41,7 @@ export default function PomodoroPage() {
       </Card>
       
       <Card>
-        <h3 className="font-sans text-heading-lg mb-4 text-text-primary">Today's Sessions</h3>
+        <h3 className="font-sans text-heading-lg mb-4 text-text-primary">Today&apos;s Sessions</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between py-3 border-b border-accent">
             <div className="flex items-center space-x-3">
