@@ -1,13 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Card } from '@/components/ui/Card'
+import { useAuth } from '@/providers/AuthProvider'
 
 export default function LoginPage() {
+  const router = useRouter()
+  const { signIn, signInWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
@@ -15,7 +19,24 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{
     email?: string
     password?: string
+    general?: string
   }>({})
+
+  // Check for OAuth error or registration success
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const error = searchParams.get('error')
+    const registered = searchParams.get('registered')
+    
+    if (error === 'oauth_failed') {
+      setErrors({ general: 'Failed to sign in with OAuth provider. Please try again.' })
+    }
+    
+    if (registered === 'true') {
+      // You can show a success message here
+      // For now, we'll just let the user know they can log in
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,18 +65,32 @@ export default function LoginPage() {
     
     setLoading(true)
     
-    // TODO: Implement Supabase authentication
-    console.log('Login attempt:', { email, password, rememberMe })
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const { error } = await signIn(email, password)
+      
+      if (error) {
+        setErrors({ general: error.message })
+        setLoading(false)
+      } else {
+        // Success - will redirect automatically via middleware
+        router.push('/dashboard')
+      }
+    } catch (err) {
+      setErrors({ general: 'An unexpected error occurred' })
       setLoading(false)
-    }, 2000)
+    }
   }
 
-  const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google login')
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await signInWithGoogle()
+      
+      if (error) {
+        setErrors({ general: error.message })
+      }
+    } catch (err) {
+      setErrors({ general: 'Failed to sign in with Google' })
+    }
   }
 
   return (
@@ -68,6 +103,12 @@ export default function LoginPage() {
           Welcome back! Please login to your account.
         </p>
       </div>
+
+      {errors.general && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
+          <p className="text-sm">{errors.general}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Input

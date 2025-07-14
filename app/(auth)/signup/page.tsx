@@ -2,12 +2,16 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Card } from '@/components/ui/Card'
+import { useAuth } from '@/providers/AuthProvider'
 
 export default function SignupPage() {
+  const router = useRouter()
+  const { signUp, signInWithGoogle } = useAuth()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -22,6 +26,7 @@ export default function SignupPage() {
     password?: string
     confirmPassword?: string
     terms?: string
+    general?: string
   }>({})
 
   const handleInputChange = (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,18 +78,34 @@ export default function SignupPage() {
     
     setLoading(true)
     
-    // TODO: Implement Supabase authentication
-    console.log('Signup attempt:', { ...formData, agreeToTerms })
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const { error } = await signUp(formData.email, formData.password, {
+        full_name: formData.name
+      })
+      
+      if (error) {
+        setErrors({ general: error.message })
+        setLoading(false)
+      } else {
+        // Show success message or redirect
+        router.push('/login?registered=true')
+      }
+    } catch (err) {
+      setErrors({ general: 'An unexpected error occurred' })
       setLoading(false)
-    }, 2000)
+    }
   }
 
-  const handleGoogleSignup = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google signup')
+  const handleGoogleSignup = async () => {
+    try {
+      const { error } = await signInWithGoogle()
+      
+      if (error) {
+        setErrors({ general: error.message })
+      }
+    } catch (err) {
+      setErrors({ general: 'Failed to sign up with Google' })
+    }
   }
 
   return (
@@ -97,6 +118,12 @@ export default function SignupPage() {
           Join Study Smart to start your learning journey
         </p>
       </div>
+
+      {errors.general && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
+          <p className="text-sm">{errors.general}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <Input
