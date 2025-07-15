@@ -28,10 +28,50 @@ interface ProfileViewProps {
       experiencePercent: number;
       title: string;
     };
-    monthlyTrend: any[];
-    subjectAnalysis: any[];
-    learningPattern: any;
-    achievements: any[];
+    monthlyTrend: Array<{
+      month: string;
+      totalHours: number;
+      avgDailyHours: number;
+      studyDays: number;
+      subjects: Record<string, number>;
+    }>;
+    subjectAnalysis: Array<{
+      id: string;
+      subject: string;
+      color: string;
+      hours: number;
+      percentage: number;
+      efficiency: number;
+      consistency: number;
+      sessionCount: number;
+      lastStudied: string;
+    }>;
+    learningPattern: {
+      preferredTime: string;
+      mostProductiveDay: string;
+      sessionStats?: {
+        avgSessionLength: number;
+        medianSessionLength: number;
+        maxSessionLength: number;
+      };
+      insights: Array<{
+        id: string;
+        type: 'positive' | 'negative' | 'neutral' | 'tip';
+        title: string;
+        description: string;
+        icon: string;
+      }>;
+    };
+    achievements: Array<{
+      id: string;
+      name: string;
+      description: string;
+      icon: string;
+      category: 'milestone' | 'streak' | 'subject' | 'special';
+      unlockedAt?: string;
+      progress?: number;
+      requirement?: string;
+    }>;
   };
 }
 

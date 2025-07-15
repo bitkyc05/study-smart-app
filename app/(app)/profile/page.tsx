@@ -84,7 +84,7 @@ async function getProfileData() {
   // 월별 추세 분석
   const monthlyData = trendResult.data || [];
   const monthlyTrend = analyzeTrend(
-    monthlyData.map((m: any) => ({ totalHours: m.totalHours || 0 }))
+    monthlyData.map((m: { totalHours: number }) => ({ totalHours: m.totalHours || 0 }))
   );
 
   // 인사이트 생성
@@ -101,8 +101,11 @@ async function getProfileData() {
 
   return {
     user: {
-      ...profileResult.data,
-      email: user.email
+      id: profileResult.data.id,
+      email: user.email || '',
+      name: profileResult.data.full_name || profileResult.data.username || '익명',
+      avatar_url: profileResult.data.avatar_url || undefined,
+      created_at: profileResult.data.created_at || new Date().toISOString()
     },
     stats: {
       ...stats,

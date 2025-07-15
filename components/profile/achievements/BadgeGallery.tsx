@@ -19,7 +19,7 @@ interface BadgeGalleryProps {
   badges: Badge[];
 }
 
-const BADGE_ICONS: Record<string, any> = {
+const BADGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   trophy: Trophy,
   star: Star,
   target: Target,

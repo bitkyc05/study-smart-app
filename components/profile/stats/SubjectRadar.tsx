@@ -39,17 +39,27 @@ export function SubjectRadar({ data }: SubjectRadarProps) {
     숙련도: Math.min(100, Math.sqrt(item.hours) * 10) // 숙련도 계산
   }));
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: { 
+    active?: boolean; 
+    payload?: Array<{
+      dataKey?: string;
+      value?: number;
+      payload?: {
+        subject: string;
+      };
+    }>;
+  }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      if (!data) return null;
       return (
         <div className="bg-white p-3 rounded-lg shadow-lg border">
           <p className="font-medium mb-2">{data.subject}</p>
           <div className="space-y-1 text-sm">
-            <p>학습 시간: {Math.round(payload.find((p: any) => p.dataKey === '시간')?.value || 0)}%</p>
-            <p>효율성: {Math.round(payload.find((p: any) => p.dataKey === '효율성')?.value || 0)}%</p>
-            <p>규칙성: {Math.round(payload.find((p: any) => p.dataKey === '규칙성')?.value || 0)}%</p>
-            <p>숙련도: {Math.round(payload.find((p: any) => p.dataKey === '숙련도')?.value || 0)}%</p>
+            <p>학습 시간: {Math.round(payload.find((p: { dataKey?: string; value?: number }) => p.dataKey === '시간')?.value || 0)}%</p>
+            <p>효율성: {Math.round(payload.find((p: { dataKey?: string; value?: number }) => p.dataKey === '효율성')?.value || 0)}%</p>
+            <p>규칙성: {Math.round(payload.find((p: { dataKey?: string; value?: number }) => p.dataKey === '규칙성')?.value || 0)}%</p>
+            <p>숙련도: {Math.round(payload.find((p: { dataKey?: string; value?: number }) => p.dataKey === '숙련도')?.value || 0)}%</p>
           </div>
         </div>
       );

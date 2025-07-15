@@ -64,7 +64,7 @@ export function LongTermTrend({ data }: LongTermTrendProps) {
             />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip 
-              formatter={(value: any) => [`${value}시간`, '총 학습']}
+              formatter={(value: number) => [`${value}시간`, '총 학습']}
               labelFormatter={(label) => label}
             />
             <Area
@@ -88,7 +88,7 @@ export function LongTermTrend({ data }: LongTermTrendProps) {
             />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip 
-              formatter={(value: any) => [`${value}시간`, '일 평균']}
+              formatter={(value: number) => [`${value}시간`, '일 평균']}
               labelFormatter={(label) => label}
             />
             <Line
@@ -105,7 +105,7 @@ export function LongTermTrend({ data }: LongTermTrendProps) {
       case 'subjects':
         // 과목별 데이터 재구성
         const subjectData = formattedData.map(item => {
-          const result: any = { monthLabel: item.monthLabel };
+          const result: Record<string, string | number> = { monthLabel: item.monthLabel };
           Object.entries(item.subjects || {}).forEach(([subject, minutes]) => {
             result[subject] = Math.round((minutes as number) / 60 * 10) / 10; // 시간으로 변환
           });
@@ -125,7 +125,7 @@ export function LongTermTrend({ data }: LongTermTrendProps) {
             />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip 
-              formatter={(value: any, name: any) => [`${value}시간`, name]}
+              formatter={(value: number, name: string) => [`${value}시간`, name]}
               labelFormatter={(label) => label}
             />
             {allSubjects.map(subject => (
@@ -172,7 +172,7 @@ export function LongTermTrend({ data }: LongTermTrendProps) {
           ].map(mode => (
             <button
               key={mode.id}
-              onClick={() => setViewMode(mode.id as any)}
+              onClick={() => setViewMode(mode.id as 'total' | 'average' | 'subjects')}
               className={`
                 px-3 py-1 rounded-lg text-sm font-medium transition-colors
                 ${viewMode === mode.id 
