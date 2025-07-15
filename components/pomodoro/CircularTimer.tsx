@@ -12,7 +12,6 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
   const { 
     state, 
     dialAngle, 
-    dialDirection,
     completedRings,
     sessionType
   } = usePomodoroStore()
@@ -96,11 +95,7 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={
-            dialDirection === 'ccw' 
-              ? circumference - (dialAngle / 360) * circumference
-              : (dialAngle / 360) * circumference
-          }
+          strokeDashoffset={circumference - (dialAngle / 360) * circumference}
           className="transition-all duration-300 ease-linear"
         />
         
@@ -113,7 +108,7 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
             className="text-sm fill-current text-text-secondary"
             style={{ transform: 'rotate(90deg)', transformOrigin: `${size / 2}px ${size / 2}px` }}
           >
-            {completedRings}회 완료
+            {completedRings} loops
           </text>
         )}
       </svg>
@@ -125,11 +120,11 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
             {ringProgress.displayTime}
           </div>
           <div className="text-base text-text-secondary mt-2">
-            {state === 'overtime' && '초과시간'}
-            {state === 'breakOvertime' && '휴식 초과'}
-            {state === 'countdown' && sessionType === 'study' && '집중 시간'}
-            {state === 'countdown' && sessionType === 'break' && '휴식 시간'}
-            {state === 'paused' && '일시정지'}
+            {state === 'overtime' && 'Overtime'}
+            {state === 'breakOvertime' && 'Break Overtime'}
+            {state === 'countdown' && sessionType === 'study' && 'Focus Time'}
+            {state === 'countdown' && sessionType === 'break' && 'Break Time'}
+            {state === 'paused' && 'Paused'}
           </div>
         </div>
       </div>

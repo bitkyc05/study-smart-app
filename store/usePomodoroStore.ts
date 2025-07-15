@@ -21,8 +21,8 @@ const DEFAULT_SETTINGS: TimerSettings = {
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   sound: true,
   desktop: true,
-  completionMessage: '시간이 종료되었습니다!',
-  breakMessage: '휴식 시간입니다!'
+  completionMessage: 'Time is up!',
+  breakMessage: 'Time for a break!'
 }
 
 export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
@@ -293,14 +293,13 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
             
           case 'overtime_started':
             set({ 
-              state: get().sessionType === 'study' ? 'overtime' : 'breakOvertime',
-              dialDirection: 'cw' // 역방향
+              state: get().sessionType === 'study' ? 'overtime' : 'breakOvertime'
             })
             
             // 알림 표시
             if (get().notificationSettings.desktop && 'Notification' in window && Notification.permission === 'granted') {
-              new Notification('시간 초과', {
-                body: '설정된 시간을 초과했습니다. 초과 시간이 기록됩니다.',
+              new Notification('Time Exceeded', {
+                body: 'The set time has been exceeded. Overtime will be recorded.',
                 icon: '/favicon.ico'
               })
             }
@@ -352,10 +351,10 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
             currentRingAngle: currentAngle
           })
         } else if (state === 'overtime' || state === 'breakOvertime') {
-          // 초과시간: 360° → 0° (비우기)
+          // 초과시간: 0° → 360° (채우기 - 시계방향)
           const overtimeRings = Math.floor(overtimeElapsed / baseUnit)
           const currentOvertimeInRing = overtimeElapsed % baseUnit
-          const angle = 360 - ((currentOvertimeInRing / baseUnit) * 360)
+          const angle = (currentOvertimeInRing / baseUnit) * 360
           
           set({ 
             dialAngle: angle,

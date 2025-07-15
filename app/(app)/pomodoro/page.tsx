@@ -27,6 +27,7 @@ export default function PomodoroPage() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null)
   const [todaySessions, setTodaySessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<number | 'etc'>>(new Set())
 
   useEffect(() => {
     fetchSubjects()
@@ -73,6 +74,7 @@ export default function PomodoroPage() {
         )
       `)
       .eq('user_id', user.id)
+      .eq('session_type', 'study')
       .gte('end_time', today.toISOString())
       .order('end_time', { ascending: false })
 
@@ -86,63 +88,82 @@ export default function PomodoroPage() {
     const minutes = Math.floor((seconds % 3600) / 60)
     
     if (hours > 0) {
-      return `${hours}시간 ${minutes}분`
+      return `${hours}h ${minutes}m`
     }
-    return `${minutes}분`
+    return `${minutes}m`
   }
 
   const formatCompletedTime = (timestamp: string) => {
     const date = new Date(timestamp)
-    return date.toLocaleTimeString('ko-KR', { 
+    return date.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit' 
     })
   }
 
+  // Group sessions by subject
+  const groupedSessions = todaySessions.reduce((acc, session) => {
+    const key = session.subject_id || 'etc'
+    if (!acc[key]) {
+      acc[key] = {
+        sessions: [],
+        totalTime: 0,
+        subject: session.subjects || { name: 'Etc', color_hex: '#9E9E9E' }
+      }
+    }
+    acc[key].sessions.push(session)
+    acc[key].totalTime += session.duration_seconds
+    return acc
+  }, {} as Record<number | 'etc', { sessions: Session[], totalTime: number, subject: { name: string, color_hex: string | null } }>)
+
+  const toggleExpanded = (subjectId: number | 'etc') => {
+    setExpandedSubjects(prev => {
+      const next = new Set(prev)
+      if (next.has(subjectId)) {
+        next.delete(subjectId)
+      } else {
+        next.add(subjectId)
+      }
+      return next
+    })
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* 과목 선택 */}
+      {/* Subject Selection */}
       <Card>
         <h2 className="font-serif text-heading-lg text-text-primary mb-4">
-          과목 선택
+          Select Subject
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="max-w-md mx-auto">
           {isLoading ? (
-            <div className="text-text-secondary">로딩 중...</div>
+            <div className="text-text-secondary">Loading...</div>
           ) : (
-            <>
-              <button
-                onClick={() => setSelectedSubjectId(null)}
-                className={`px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-2 ${
-                  selectedSubjectId === null
-                    ? 'border-accent-focus bg-accent-light'
-                    : 'border-accent hover:border-accent-focus'
-                }`}
+            <div className="relative">
+              <select
+                value={selectedSubjectId || ''}
+                onChange={(e) => setSelectedSubjectId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full px-4 py-3 pr-10 rounded-lg border-2 border-accent hover:border-accent-focus focus:border-accent-focus focus:outline-none appearance-none bg-background text-text-primary cursor-pointer text-center font-serif text-heading-md"
               >
+                <option value="">Etc (Select Subject)</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              {selectedSubjectId !== null && (
                 <div 
-                  className="w-4 h-4 rounded-full"
-                  style={{ backgroundColor: '#9E9E9E' }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full"
+                  style={{ backgroundColor: subjects.find(s => s.id === selectedSubjectId)?.color_hex || '#5D737E' }}
                 />
-                <span className="text-body-md">기타(Etc)</span>
-              </button>
-              {subjects.map((subject) => (
-                <button
-                  key={subject.id}
-                  onClick={() => setSelectedSubjectId(subject.id)}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-2 ${
-                    selectedSubjectId === subject.id
-                      ? 'border-accent-focus bg-accent-light'
-                      : 'border-accent hover:border-accent-focus'
-                  }`}
-                >
-                  <div 
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: subject.color_hex || '#5D737E' }}
-                  />
-                  <span className="text-body-md">{subject.name}</span>
-                </button>
-              ))}
-            </>
+              )}
+            </div>
           )}
         </div>
       </Card>
@@ -150,43 +171,78 @@ export default function PomodoroPage() {
       {/* 타이머 */}
       <PomodoroTimer subjectId={selectedSubjectId?.toString()} />
       
-      {/* 오늘의 세션 */}
+      {/* Today's Sessions */}
       <Card>
-        <h3 className="font-sans text-heading-lg mb-4 text-text-primary">
-          오늘의 학습 기록
+        <h3 className="font-serif text-heading-lg mb-4 text-text-primary">
+          Today's Study Sessions
         </h3>
         {todaySessions.length === 0 ? (
           <p className="text-text-secondary text-center py-8">
-            아직 학습 기록이 없습니다
+            No study sessions yet
           </p>
         ) : (
           <div className="space-y-3">
-            {todaySessions.map((session, index) => (
-              <div 
-                key={session.id}
-                className={`flex items-center justify-between py-3 ${
-                  index < todaySessions.length - 1 ? 'border-b border-accent' : ''
-                }`}
-              >
-                <div className="flex items-center space-x-3">
+            {Object.entries(groupedSessions).map(([subjectId, data], index) => {
+              const isExpanded = expandedSubjects.has(subjectId as number | 'etc')
+              return (
+                <div key={subjectId}>
+                  {/* Summary Row */}
                   <div 
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: session.subjects?.color_hex || '#5D737E' }}
-                  />
-                  <div>
-                    <p className="text-body-md font-medium text-text-primary">
-                      {session.subjects?.name || '기타(Etc)'}
-                    </p>
-                    <p className="text-caption text-text-secondary">
-                      {formatCompletedTime(session.end_time)} 완료
-                    </p>
+                    className={`flex items-center justify-between py-3 cursor-pointer hover:bg-accent-light rounded-lg px-2 -mx-2 ${
+                      index < Object.keys(groupedSessions).length - 1 && !isExpanded ? 'border-b border-accent' : ''
+                    }`}
+                    onClick={() => toggleExpanded(subjectId as number | 'etc')}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <svg 
+                        className={`w-4 h-4 text-text-secondary transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <div 
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: data.subject.color_hex || '#9E9E9E' }}
+                      />
+                      <div>
+                        <p className="text-body-md font-medium text-text-primary">
+                          {data.subject.name}
+                        </p>
+                        <p className="text-caption text-text-secondary">
+                          {data.sessions.length} session{data.sessions.length > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-body-md font-medium text-text-primary">
+                      {formatTime(data.totalTime)}
+                    </span>
                   </div>
+                  
+                  {/* Expanded Sessions */}
+                  {isExpanded && (
+                    <div className="ml-8 mt-2 space-y-2 mb-4">
+                      {data.sessions.map((session, sessionIndex) => (
+                        <div 
+                          key={session.id}
+                          className={`flex items-center justify-between py-2 px-2 rounded ${
+                            sessionIndex < data.sessions.length - 1 ? 'border-b border-accent/50' : ''
+                          }`}
+                        >
+                          <p className="text-caption text-text-secondary">
+                            {formatCompletedTime(session.end_time)}
+                          </p>
+                          <span className="text-body-sm text-text-primary">
+                            {formatTime(session.duration_seconds)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="text-body-md text-text-primary">
-                  {formatTime(session.duration_seconds)}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </Card>

@@ -82,7 +82,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               className="flex items-center gap-2"
               size="lg"
             >
-              공부 시작
+              Start Study
             </Button>
             <Button 
               onClick={startBreak}
@@ -90,7 +90,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               className="flex items-center gap-2"
               size="lg"
             >
-              휴식 시작
+              Start Break
             </Button>
           </>
         )
@@ -105,7 +105,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               className="flex items-center gap-2"
               size="lg"
             >
-              정지
+              Stop
             </Button>
           )
         }
@@ -118,7 +118,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               className="flex items-center gap-2"
               size="lg"
             >
-              일시정지
+              Pause
             </Button>
             <Button 
               onClick={reset}
@@ -126,7 +126,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               className="flex items-center gap-2"
               size="lg"
             >
-              리셋
+              Reset
             </Button>
           </>
         )
@@ -139,7 +139,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               className="flex items-center gap-2"
               size="lg"
             >
-              재개
+              Resume
             </Button>
             <Button 
               onClick={reset}
@@ -147,7 +147,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               className="flex items-center gap-2"
               size="lg"
             >
-              리셋
+              Reset
             </Button>
           </>
         )
@@ -161,7 +161,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
             className="flex items-center gap-2 bg-warning hover:bg-warning-dark"
             size="lg"
           >
-            정지 (초과시간 저장)
+            Stop (Save Overtime)
           </Button>
         )
       
@@ -177,33 +177,33 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
         {state === 'idle' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-body-md text-text-primary">학습 시간</label>
+              <label className="text-body-md text-text-primary">Study Duration</label>
               <select
                 value={settings.studyDuration}
                 onChange={(e) => updateSettings({ studyDuration: Number(e.target.value) })}
                 className="px-4 py-2 border border-accent rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-focus"
               >
-                <option value={10}>10초 (테스트)</option>
-                <option value={900}>15분</option>
-                <option value={1200}>20분</option>
-                <option value={1500}>25분</option>
-                <option value={1800}>30분</option>
-                <option value={2700}>45분</option>
-                <option value={3600}>60분</option>
+                <option value={10}>10s (Test)</option>
+                <option value={900}>15 min</option>
+                <option value={1200}>20 min</option>
+                <option value={1500}>25 min</option>
+                <option value={1800}>30 min</option>
+                <option value={2700}>45 min</option>
+                <option value={3600}>60 min</option>
               </select>
             </div>
             <div className="flex justify-between items-center">
-              <label className="text-body-md text-text-primary">휴식 시간</label>
+              <label className="text-body-md text-text-primary">Break Duration</label>
               <select
                 value={settings.shortBreakDuration}
                 onChange={(e) => updateSettings({ shortBreakDuration: Number(e.target.value) })}
                 className="px-4 py-2 border border-accent rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-focus"
               >
-                <option value={10}>10초 (테스트)</option>
-                <option value={300}>5분</option>
-                <option value={600}>10분</option>
-                <option value={900}>15분</option>
-                <option value={1200}>20분</option>
+                <option value={10}>10s (Test)</option>
+                <option value={300}>5 min</option>
+                <option value={600}>10 min</option>
+                <option value={900}>15 min</option>
+                <option value={1200}>20 min</option>
               </select>
             </div>
           </div>
@@ -222,7 +222,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
         {/* 세션 타입 표시 */}
         {state === 'idle' && subjectId === null && (
           <div className="text-center text-sm text-text-secondary">
-            기타(Etc)로 공부 시간이 기록됩니다
+            Study time will be recorded as Etc
           </div>
         )}
       </div>
