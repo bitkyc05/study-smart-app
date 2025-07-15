@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Study Smart 📚⏰
 
-## Getting Started
+포모도로 기법과 학습 데이터 시각화에 기반한 학습 시간 관리 웹 애플리케이션
 
-First, run the development server:
+## 🌟 주요 기능
 
+### ✅ 완료된 기능
+- **🍅 포모도로 타이머**: State Machine 기반 안정적인 타이머 시스템
+- **📊 실시간 대시보드**: 학습 통계 및 차트 시각화
+- **⚙️ 개인화 설정**: D-day 설정, 목표 시간 관리, 과목별 시간 배분
+- **🔐 인증 시스템**: Supabase 기반 사용자 인증
+- **📱 반응형 UI**: 모든 디바이스에서 최적화된 사용자 경험
+
+### 🔄 진행 중인 기능
+- **📅 위클리 뷰**: 주간 학습 패턴 분석
+- **🗓️ 캘린더 히트맵**: 장기 학습 기록 시각화
+
+## 🛠️ 기술 스택
+
+- **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Authentication, Real-time)
+- **State Management**: Zustand
+- **Charts**: Recharts
+- **UI Components**: Headless UI, Heroicons
+
+## 🚀 시작하기
+
+### 환경 설정
 ```bash
+# 의존성 설치
+npm install
+
+# 환경 변수 설정
+cp .env.example .env.local
+# .env.local 파일에 Supabase 키 설정 필요
+
+# 개발 서버 실행
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Supabase 설정
+1. [Supabase](https://supabase.com)에서 새 프로젝트 생성
+2. 데이터베이스 테이블 생성 (스키마 제공)
+3. 환경 변수에 API 키 설정
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📈 프로젝트 진행 상황
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **전체 진행률**: 96%
+- **현재 단계**: Phase 4.3 완료 (설정 페이지 구현)
+- **다음 단계**: Phase 4.4 (위클리 뷰 구현)
 
-## Learn More
+## 🎯 핵심 성과
 
-To learn more about Next.js, take a look at the following resources:
+- ✅ 완전한 포모도로 시스템 구현
+- ✅ 실시간 데이터 시각화 완성
+- ✅ 사용자 맞춤 설정 시스템
+- ✅ 프로덕션 빌드 안정화
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🤝 기여하기
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+이 프로젝트는 학습 목적으로 개발되었습니다. 기여나 제안사항이 있으시면 Issues를 통해 알려주세요.
 
-## Deploy on Vercel
+## 📄 라이선스
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+MIT License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+**개발 기간**: 2025년 7월  
+**개발자**: Claude AI와 협업 개발
