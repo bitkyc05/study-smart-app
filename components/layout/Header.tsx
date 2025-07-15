@@ -30,7 +30,10 @@ function UserMenu({ isOpen, onToggle, onSignOut, userEmail, router }: UserMenuPr
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-accent z-50">
           <div className="py-1">
-            <button className="w-full px-4 py-2 text-left text-body-md text-text-primary hover:bg-accent-light">
+            <button 
+              onClick={() => router.push('/profile')}
+              className="w-full px-4 py-2 text-left text-body-md text-text-primary hover:bg-accent-light"
+            >
               Profile
             </button>
             <button 
