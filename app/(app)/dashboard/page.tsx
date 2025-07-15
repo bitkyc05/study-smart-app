@@ -1,7 +1,10 @@
 import { Card } from '@/components/ui/Card'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { getDashboardStats, formatDuration, formatTime } from '@/lib/dashboard-helpers'
-import { ChartSkeleton } from '@/components/charts/ChartSkeleton'
+import { WeeklyBarChart } from '@/components/charts/WeeklyBarChart'
+import { SubjectPieChart } from '@/components/charts/SubjectPieChart'
+import { TodayRadialChart } from '@/components/charts/TodayRadialChart'
+import { RefreshButton } from '@/components/dashboard/RefreshButton'
 
 export default async function DashboardPage() {
   const stats = await getDashboardStats()
@@ -18,6 +21,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-sans text-display-md text-text-primary">Dashboard</h1>
+          <p className="text-body-md text-text-secondary mt-1">Track your study progress</p>
+        </div>
+        <RefreshButton />
+      </div>
+
       <div className="grid md:grid-cols-3 gap-6">
         <StatCard
           title="Today's Study Time"
@@ -50,8 +61,27 @@ export default async function DashboardPage() {
         />
       </div>
       
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card className="p-6">
+          <h3 className="font-sans text-heading-lg mb-4 text-text-primary">Today&apos;s Progress</h3>
+          <div className="h-48">
+            <TodayRadialChart 
+              studyMinutes={Math.round(stats.todayStudyTime / 60)}
+              goalMinutes={120} // 2 hours default daily goal
+            />
+          </div>
+        </Card>
+        
+        <Card className="md:col-span-2 p-6">
+          <h3 className="font-sans text-heading-lg mb-4 text-text-primary">Subject Distribution</h3>
+          <div className="h-48">
+            <SubjectPieChart data={stats.subjectBreakdown} />
+          </div>
+        </Card>
+      </div>
+      
       <div className="grid md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="p-6 md:col-span-2">
           <h3 className="font-sans text-heading-lg mb-4 text-text-primary">Recent Sessions</h3>
           <div className="space-y-3">
             {stats.recentSessions.length === 0 ? (
@@ -83,40 +113,13 @@ export default async function DashboardPage() {
             )}
           </div>
         </Card>
-        
-        <Card>
-          <h3 className="font-sans text-heading-lg mb-4 text-text-primary">Subject Breakdown</h3>
-          <div className="space-y-3">
-            {stats.subjectBreakdown.length === 0 ? (
-              <p className="text-body-md text-text-secondary text-center py-4">
-                No subjects tracked yet
-              </p>
-            ) : (
-              stats.subjectBreakdown.map((subject) => (
-                <div key={subject.name} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: subject.color }}
-                    />
-                    <span className="text-body-md text-text-primary">{subject.name}</span>
-                  </div>
-                  <span className="text-body-md font-medium text-text-primary">
-                    {formatDuration(subject.duration)}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
       </div>
 
       <div className="grid md:grid-cols-1 gap-6">
-        <Card>
+        <Card className="p-6">
           <h3 className="font-sans text-heading-lg mb-4 text-text-primary">Weekly Study Trend</h3>
           <div className="h-64">
-            <ChartSkeleton />
-            {/* WeeklyBarChart will be implemented next */}
+            <WeeklyBarChart data={stats.weeklyChartData} />
           </div>
         </Card>
       </div>
