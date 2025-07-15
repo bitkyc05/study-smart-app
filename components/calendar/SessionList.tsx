@@ -57,11 +57,11 @@ export function SessionList({ sessions }: SessionListProps) {
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {session.created_at 
-                    ? new Date(session.created_at).toLocaleTimeString('ko-KR', {
+                    ? new Date(session.created_at).toLocaleTimeString(undefined, {
                         hour: '2-digit',
                         minute: '2-digit',
                       })
-                    : new Date(session.end_time).toLocaleTimeString('ko-KR', {
+                    : new Date(session.end_time).toLocaleTimeString(undefined, {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}

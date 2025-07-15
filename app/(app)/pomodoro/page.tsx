@@ -100,7 +100,7 @@ export default function PomodoroPage() {
 
   const formatCompletedTime = (timestamp: string) => {
     const date = new Date(timestamp)
-    return date.toLocaleTimeString('en-US', { 
+    return date.toLocaleTimeString(undefined, { 
       hour: '2-digit', 
       minute: '2-digit' 
     })

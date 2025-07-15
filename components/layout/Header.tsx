@@ -62,7 +62,7 @@ export function Header() {
   const router = useRouter()
   
   const today = new Date()
-  const formattedDate = today.toLocaleDateString('en-US', { 
+  const formattedDate = today.toLocaleDateString(undefined, { 
     weekday: 'long', 
     year: 'numeric', 
     month: 'long', 

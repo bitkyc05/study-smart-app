@@ -203,7 +203,7 @@ export function formatDuration(seconds: number): string {
 // Helper function to format time for display
 export function formatTime(date: string | Date): string {
   const d = new Date(date)
-  return d.toLocaleTimeString('en-US', { 
+  return d.toLocaleTimeString(undefined, { 
     hour: 'numeric', 
     minute: '2-digit',
     hour12: true 

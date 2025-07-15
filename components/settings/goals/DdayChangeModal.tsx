@@ -15,7 +15,7 @@ export default function DdayChangeModal({
   const formatDate = (date: Date | string | null) => {
     if (!date) return 'Not set'
     const d = typeof date === 'string' ? new Date(date) : date
-    return d.toLocaleDateString('en-US', { 
+    return d.toLocaleDateString(undefined, { 
       year: 'numeric', 
       month: 'long', 
       day: 'numeric' 

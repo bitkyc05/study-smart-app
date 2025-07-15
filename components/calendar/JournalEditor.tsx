@@ -161,7 +161,7 @@ export function JournalEditor({ date, initialJournal, onUpdate }: JournalEditorP
           </p>
           {initialJournal?.updated_at && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              마지막 수정: {new Date(initialJournal.updated_at).toLocaleString('ko-KR')}
+              마지막 수정: {new Date(initialJournal.updated_at).toLocaleString()}
             </p>
           )}
         </div>
