@@ -1,5 +1,7 @@
 import { getServerClient } from '@/lib/supabase/server'
 import { startOfDay, startOfWeek, subDays, format } from 'date-fns'
+import { getUserTimezone } from '@/lib/user-timezone'
+import { getCurrentDateInTimezone, userTimezoneToUtc, utcToUserTimezone } from '@/lib/date-utils'
 
 export interface StudySession {
   id: number
@@ -38,13 +40,22 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return null
 
-    // Get date ranges (adjust for user timezone)
-    const now = new Date()
-    const userTimezoneOffset = now.getTimezoneOffset()
-    const today = new Date(now.getTime() - (userTimezoneOffset * 60000))
-    const todayStart = startOfDay(today)
-    const weekStart = startOfWeek(today)
-    const sevenDaysAgo = subDays(today, 6)
+    // Get user's timezone
+    const userTimezone = await getUserTimezone()
+    
+    // Get current date in user's timezone
+    const todayInUserTz = getCurrentDateInTimezone(userTimezone)
+    
+    // Calculate date ranges in user's timezone
+    const todayStartInUserTz = startOfDay(todayInUserTz)
+    const weekStartInUserTz = startOfWeek(todayInUserTz, { weekStartsOn: 1 })
+    const sevenDaysAgoInUserTz = subDays(todayInUserTz, 6)
+    
+    // Convert to UTC for database queries
+    const todayStart = userTimezoneToUtc(todayStartInUserTz, userTimezone)
+    const todayEnd = userTimezoneToUtc(new Date(todayInUserTz.getTime() + 24 * 60 * 60 * 1000), userTimezone)
+    const weekStart = userTimezoneToUtc(weekStartInUserTz, userTimezone)
+    const sevenDaysAgo = userTimezoneToUtc(sevenDaysAgoInUserTz, userTimezone)
 
     // Fetch today's sessions
     const { data: todaySessions } = await supabase
@@ -54,7 +65,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       .eq('session_type', 'study')
       .in('status', ['completed', 'in_progress'])
       .gte('start_time', todayStart.toISOString())
-      .lte('start_time', today.toISOString())
+      .lt('start_time', todayEnd.toISOString())
 
     // Fetch this week's sessions
     const { data: weeklySessions } = await supabase
@@ -64,7 +75,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       .eq('session_type', 'study')
       .in('status', ['completed', 'in_progress'])
       .gte('start_time', weekStart.toISOString())
-      .lte('start_time', today.toISOString())
+      .lt('start_time', todayEnd.toISOString())
 
     // Fetch recent sessions with subjects
     const { data: recentSessions } = await supabase
@@ -91,7 +102,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       .eq('session_type', 'study')
       .in('status', ['completed', 'in_progress'])
       .gte('start_time', sevenDaysAgo.toISOString())
-      .lte('start_time', today.toISOString())
+      .lt('start_time', todayEnd.toISOString())
 
     // Fetch user settings for weekly goal
     const { data: userSettings } = await supabase
@@ -151,16 +162,18 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     // Process weekly chart data
     const dailyMap = new Map<string, number>()
     
-    // Initialize all days with 0
+    // Initialize all days with 0 in user's timezone
     for (let i = 6; i >= 0; i--) {
-      const date = subDays(today, i)
+      const date = subDays(todayInUserTz, i)
       const dateKey = format(date, 'yyyy-MM-dd')
       dailyMap.set(dateKey, 0)
     }
 
     // Aggregate sessions by day
     chartSessions?.forEach(session => {
-      const dateKey = format(new Date(session.start_time), 'yyyy-MM-dd')
+      // Convert session time to user's timezone before formatting
+      const sessionDateInUserTz = utcToUserTimezone(new Date(session.start_time), userTimezone)
+      const dateKey = format(sessionDateInUserTz, 'yyyy-MM-dd')
       if (dailyMap.has(dateKey)) {
         dailyMap.set(dateKey, 
           dailyMap.get(dateKey)! + (session.duration_seconds || 0)
