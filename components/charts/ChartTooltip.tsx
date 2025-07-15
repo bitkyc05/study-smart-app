@@ -4,6 +4,13 @@ import React from 'react'
 import { TooltipProps } from 'recharts'
 
 interface ChartTooltipProps extends TooltipProps<number, string> {
+  active?: boolean
+  payload?: Array<{
+    value: number
+    name?: string
+    color?: string
+  }>
+  label?: string
   formatValue?: (value: number) => string
   valueUnit?: string
   showLabel?: boolean

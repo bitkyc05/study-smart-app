@@ -175,7 +175,7 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         const { workerRef, settings, currentSessionId } = get()
         
         // 진행 중인 세션이 있으면 중단으로 처리
-        if (currentSessionId && !currentSessionId.startsWith('offline-')) {
+        if (currentSessionId && (typeof currentSessionId === 'number' || !currentSessionId.startsWith('offline-'))) {
           try {
             fetchWithOfflineSupport('/api/sessions', {
               method: 'PATCH',
@@ -218,7 +218,7 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
           : settingDuration + overtimeElapsed
         
         // 현재 세션 업데이트
-        if (currentSessionId && !currentSessionId.startsWith('offline-')) {
+        if (currentSessionId && (typeof currentSessionId === 'number' || !currentSessionId.startsWith('offline-'))) {
           try {
             const response = await fetchWithOfflineSupport('/api/sessions', {
               method: 'PATCH',

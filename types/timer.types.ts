@@ -13,7 +13,7 @@ export interface TimerContext {
   state: TimerState
   sessionType: SessionType
   subjectId: string | null
-  currentSessionId: number | null // 현재 진행 중인 세션 ID
+  currentSessionId: string | number | null // 현재 진행 중인 세션 ID
   
   // Time values (seconds)
   settingDuration: number        // 설정된 시간

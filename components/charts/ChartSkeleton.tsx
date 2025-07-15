@@ -98,7 +98,7 @@ export function ChartSkeletonGrid({
       {Array.from({ length: count }).map((_, index) => (
         <ChartSkeleton 
           key={index} 
-          type={['bar', 'line', 'area', 'pie'][index % 4] as any}
+          type={['bar', 'line', 'area', 'pie'][index % 4] as 'bar' | 'line' | 'area' | 'pie'}
         />
       ))}
     </div>

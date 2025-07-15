@@ -4,7 +4,7 @@ import React from 'react'
 import { ResponsiveContainer } from 'recharts'
 
 interface ChartContainerProps {
-  children: React.ReactNode
+  children: React.ReactElement
   height?: number | string
   width?: string | number
   minHeight?: number
