@@ -41,14 +41,6 @@ export default function GoalsSettingsPage() {
     fetchSubjects()
   }, [loadSettings])
 
-  // Initialize subject allocations when subjects are loaded
-  useEffect(() => {
-    if (subjects.length > 0 && settings && Object.keys(settings.subject_allocations).length === 0) {
-      // If no allocations exist, initialize with equal distribution
-      handleRebalance()
-    }
-  }, [subjects, settings]) // handleRebalance is stable due to useCallback
-
   const fetchSubjects = async () => {
     try {
       const response = await fetch('/api/subjects')
