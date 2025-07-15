@@ -8,7 +8,7 @@ import WeeklyViewSkeleton from '@/components/weekly/WeeklyViewSkeleton'
 export default async function WeeklyPage({
   searchParams
 }: {
-  searchParams: { date?: string }
+  searchParams: Promise<{ date?: string }>
 }) {
   const supabase = await getServerClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -18,8 +18,9 @@ export default async function WeeklyPage({
   }
 
   // Parse the date from URL or use current date
-  const targetDate = searchParams.date 
-    ? parseISO(searchParams.date) 
+  const params = await searchParams
+  const targetDate = params.date 
+    ? parseISO(params.date) 
     : new Date()
   
   // Calculate week boundaries (Monday start)
@@ -33,21 +34,25 @@ export default async function WeeklyPage({
     { data: weekComparison },
     { data: insights }
   ] = await Promise.all([
-    supabase.rpc('get_daily_study_summary', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).rpc('get_daily_study_summary', {
       start_date: format(weekStart, 'yyyy-MM-dd'),
       end_date: format(weekEnd, 'yyyy-MM-dd'),
       p_user_id: user.id
     }),
-    supabase.rpc('get_hourly_study_pattern', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).rpc('get_hourly_study_pattern', {
       start_date: format(weekStart, 'yyyy-MM-dd'),
       end_date: format(weekEnd, 'yyyy-MM-dd'),
       p_user_id: user.id
     }),
-    supabase.rpc('get_weekly_comparison', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).rpc('get_weekly_comparison', {
       week_start: format(weekStart, 'yyyy-MM-dd'),
       p_user_id: user.id
     }),
-    supabase.rpc('get_study_insights', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).rpc('get_study_insights', {
       start_date: format(weekStart, 'yyyy-MM-dd'),
       end_date: format(weekEnd, 'yyyy-MM-dd'),
       p_user_id: user.id

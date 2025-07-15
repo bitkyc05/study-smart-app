@@ -47,7 +47,7 @@ export default function WeekComparison({ data }: WeekComparisonProps) {
     })
 
     return days
-  }, [data, dayNames])
+  }, [data])
 
   // Calculate totals and improvement
   const { totalThisWeek, totalLastWeek, improvement } = useMemo(() => {

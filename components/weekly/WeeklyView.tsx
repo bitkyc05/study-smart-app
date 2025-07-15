@@ -72,7 +72,6 @@ export default function WeeklyView({
       {/* Daily Timeline */}
       <DailyTimeline 
         weekStart={weekStart} 
-        weekEnd={weekEnd} 
         dailySummaries={dailySummaries}
       />
     </div>
