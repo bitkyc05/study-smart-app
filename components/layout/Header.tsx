@@ -3,15 +3,17 @@
 import { UserCircleIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 import { useAuth } from '@/providers/AuthProvider'
+import { useRouter } from 'next/navigation'
 
 interface UserMenuProps {
   isOpen: boolean
   onToggle: () => void
   onSignOut: () => void
   userEmail?: string | null
+  router: any
 }
 
-function UserMenu({ isOpen, onToggle, onSignOut, userEmail }: UserMenuProps) {
+function UserMenu({ isOpen, onToggle, onSignOut, userEmail, router }: UserMenuProps) {
   return (
     <div className="relative">
       <button
@@ -31,7 +33,10 @@ function UserMenu({ isOpen, onToggle, onSignOut, userEmail }: UserMenuProps) {
             <button className="w-full px-4 py-2 text-left text-body-md text-text-primary hover:bg-accent-light">
               Profile
             </button>
-            <button className="w-full px-4 py-2 text-left text-body-md text-text-primary hover:bg-accent-light">
+            <button 
+              onClick={() => router.push('/settings')}
+              className="w-full px-4 py-2 text-left text-body-md text-text-primary hover:bg-accent-light"
+            >
               Settings
             </button>
             <hr className="my-1 border-accent" />
@@ -51,6 +56,7 @@ function UserMenu({ isOpen, onToggle, onSignOut, userEmail }: UserMenuProps) {
 export function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const { user, signOut } = useAuth()
+  const router = useRouter()
   
   const today = new Date()
   const formattedDate = today.toLocaleDateString('en-US', { 
@@ -89,6 +95,7 @@ export function Header() {
             onToggle={() => setIsUserMenuOpen(!isUserMenuOpen)}
             onSignOut={handleSignOut}
             userEmail={user?.email}
+            router={router}
           />
         </div>
       </div>
