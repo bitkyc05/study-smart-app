@@ -2,6 +2,7 @@
 
 import { format, addDays } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { useState, useEffect } from 'react'
 
 interface DailySummary {
   day: string
@@ -20,6 +21,12 @@ export default function DailyTimeline({
   weekStart, 
   dailySummaries 
 }: Omit<DailyTimelineProps, 'weekEnd'>) {
+  const [todayString, setTodayString] = useState('')
+  
+  useEffect(() => {
+    setTodayString(format(new Date(), 'yyyy-MM-dd'))
+  }, [])
+
   // Create a map for quick lookup
   const summaryMap = new Map(
     dailySummaries.map(summary => [summary.day, summary])
@@ -57,7 +64,7 @@ export default function DailyTimeline({
       
       <div className="space-y-3">
         {days.map(({ date, summary }) => {
-          const isToday = format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+          const isToday = todayString === format(date, 'yyyy-MM-dd')
           
           return (
             <div 

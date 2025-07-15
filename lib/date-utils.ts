@@ -115,6 +115,7 @@ export function getPreviousMonth(year: number, month: number): { year: number; m
 
 /**
  * Get current year and month
+ * Note: This should only be used in client-side components to avoid SSR timezone issues
  */
 export function getCurrentYearMonth(): { year: number; month: number } {
   const now = new Date();
