@@ -18,19 +18,30 @@ export function SubjectPieChart({ data }: SubjectPieChartProps) {
   const renderCustomLabel = ({
     cx, cy, midAngle, innerRadius, outerRadius, percent
   }: {
-    cx: number
-    cy: number
-    midAngle: number
-    innerRadius: number
-    outerRadius: number
-    percent: number
+    cx?: number
+    cy?: number
+    midAngle?: number
+    innerRadius?: number
+    outerRadius?: number
+    percent?: number
   }) => {
+    // Safety check for all undefined values
+    if (
+      cx === undefined ||
+      cy === undefined ||
+      midAngle === undefined ||
+      innerRadius === undefined ||
+      outerRadius === undefined ||
+      percent === undefined ||
+      percent < 0.05
+    ) {
+      return null
+    }
+
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
-
-    if (percent < 0.05) return null // Don't show label for small slices
 
     return (
       <text 
