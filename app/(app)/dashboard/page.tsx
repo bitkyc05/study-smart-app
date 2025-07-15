@@ -67,7 +67,7 @@ export default async function DashboardPage() {
           <div className="h-48">
             <TodayRadialChart 
               studyMinutes={Math.round(stats.todayStudyTime / 60)}
-              goalMinutes={120} // 2 hours default daily goal
+              goalMinutes={stats.dailyGoal}
             />
           </div>
         </Card>

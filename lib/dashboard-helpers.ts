@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
+import { getServerClient } from '@/lib/supabase/server'
 import { startOfDay, startOfWeek, subDays, format } from 'date-fns'
 
 export interface StudySession {
@@ -22,6 +21,7 @@ export interface DashboardStats {
   todayStudyTime: number
   weeklyStudyTime: number
   weeklyGoal: number
+  dailyGoal: number
   todaySessionCount: number
   totalSessionCount: number
   weeklyProgress: number
@@ -32,8 +32,7 @@ export interface DashboardStats {
 
 export async function getDashboardStats(): Promise<DashboardStats | null> {
   try {
-    const cookieStore = await cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await getServerClient()
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -92,11 +91,11 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       .gte('start_time', sevenDaysAgo.toISOString())
       .lte('start_time', today.toISOString())
 
-    // Fetch user profile for weekly goal
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('total_goal_time_minutes')
-      .eq('id', user.id)
+    // Fetch user settings for weekly goal
+    const { data: userSettings } = await supabase
+      .from('user_settings')
+      .select('study_goals')
+      .eq('user_id', user.id)
       .single()
 
     // Calculate statistics
@@ -106,7 +105,11 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     const weeklyStudyTime = weeklySessions?.reduce((acc, session) => 
       acc + (session.duration_seconds || 0), 0) || 0
 
-    const weeklyGoal = (profile?.total_goal_time_minutes || 2000) * 60 // Convert to seconds
+    // Extract weekly goal from user settings or use default
+    const studyGoals = userSettings?.study_goals as { weekly_goal_minutes?: number } | null
+    const weeklyGoalMinutes = studyGoals?.weekly_goal_minutes || 2000 // Default 2000 minutes
+    const weeklyGoal = weeklyGoalMinutes * 60 // Convert to seconds
+    const dailyGoal = Math.round(weeklyGoalMinutes / 7) // Calculate daily goal in minutes
     const weeklyProgress = weeklyGoal > 0 ? (weeklyStudyTime / weeklyGoal) * 100 : 0
 
     // Process subject breakdown
@@ -172,6 +175,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       todayStudyTime,
       weeklyStudyTime,
       weeklyGoal,
+      dailyGoal,
       todaySessionCount: todaySessions?.length || 0,
       totalSessionCount: recentSessions?.length || 0,
       weeklyProgress,
