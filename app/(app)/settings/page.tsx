@@ -5,7 +5,8 @@ import {
   Clock,
   ChevronRight,
   Palette,
-  User
+  User,
+  BookOpen
 } from 'lucide-react';
 
 const settingsSections = [
@@ -18,6 +19,13 @@ const settingsSections = [
         description: 'Set D-day goals and allocate study time',
         href: '/settings/goals',
         color: 'text-blue-500 bg-blue-50'
+      },
+      {
+        icon: BookOpen,
+        label: 'Subject Management',
+        description: 'Add, edit, and organize your study subjects',
+        href: '/settings/subjects',
+        color: 'text-orange-500 bg-orange-50'
       },
       {
         icon: Clock,

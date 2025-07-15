@@ -206,12 +206,7 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
           {getButtons()}
         </div>
         
-        {/* 세션 타입 표시 */}
-        {state === 'idle' && subjectId === null && (
-          <div className="text-center text-sm text-text-secondary">
-            Study time will be recorded as Etc
-          </div>
-        )}
+        {/* 세션 타입 표시 - 이제 과목이 항상 선택되므로 메시지 제거 */}
       </div>
     </Card>
   )

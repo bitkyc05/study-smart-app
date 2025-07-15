@@ -32,7 +32,7 @@ export default function PomodoroPage() {
   useEffect(() => {
     fetchSubjects()
     fetchTodaySessions()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSubjects = async () => {
     const supabase = createClient()
@@ -48,6 +48,11 @@ export default function PomodoroPage() {
 
     if (!error && data) {
       setSubjects(data)
+      // Set "Etc" as default selected subject
+      const etcSubject = data.find(s => s.name === 'Etc')
+      if (etcSubject && selectedSubjectId === null) {
+        setSelectedSubjectId(etcSubject.id)
+      }
     }
     setIsLoading(false)
   }
@@ -145,7 +150,6 @@ export default function PomodoroPage() {
                 onChange={(e) => setSelectedSubjectId(e.target.value ? Number(e.target.value) : null)}
                 className="w-full px-4 py-3 pr-10 rounded-lg border-2 border-accent hover:border-accent-focus focus:border-accent-focus focus:outline-none appearance-none bg-background text-text-primary cursor-pointer text-center font-serif text-heading-md"
               >
-                <option value="">Etc (Select Subject)</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
