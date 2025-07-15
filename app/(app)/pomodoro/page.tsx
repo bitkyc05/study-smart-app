@@ -174,7 +174,7 @@ export default function PomodoroPage() {
       {/* Today's Sessions */}
       <Card>
         <h3 className="font-serif text-heading-lg mb-4 text-text-primary">
-          Today's Study Sessions
+          Today&apos;s Study Sessions
         </h3>
         {todaySessions.length === 0 ? (
           <p className="text-text-secondary text-center py-8">

@@ -2,6 +2,22 @@ import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { startOfDay, startOfWeek, subDays, format } from 'date-fns'
 
+export interface StudySession {
+  id: number
+  user_id: string
+  subject_id: number | null
+  session_type: string
+  start_time: string
+  end_time: string
+  duration_seconds: number
+  status: string | null
+  subjects?: {
+    id: number
+    name: string
+    color_hex: string | null
+  } | null
+}
+
 export interface DashboardStats {
   todayStudyTime: number
   weeklyStudyTime: number
@@ -9,7 +25,7 @@ export interface DashboardStats {
   todaySessionCount: number
   totalSessionCount: number
   weeklyProgress: number
-  recentSessions: any[]
+  recentSessions: StudySession[]
   subjectBreakdown: { name: string; color: string; duration: number }[]
   weeklyChartData: { date: string; minutes: number }[]
 }

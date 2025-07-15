@@ -2,7 +2,6 @@ import { Card } from '@/components/ui/Card'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { getDashboardStats, formatDuration, formatTime } from '@/lib/dashboard-helpers'
 import { ChartSkeleton } from '@/components/charts/ChartSkeleton'
-import { format } from 'date-fns'
 
 export default async function DashboardPage() {
   const stats = await getDashboardStats()
