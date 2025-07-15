@@ -1,6 +1,7 @@
 'use server';
 
 import { getServerClient } from '@/lib/supabase/server';
+import { getTimezoneAwareDate } from '@/lib/date-utils';
 
 export interface StudySession {
   id: number;
@@ -38,10 +39,10 @@ export async function getSessionsByDate(date: string) {
       throw new Error('Unauthorized');
     }
 
-    // 날짜 범위 설정 (해당 날짜의 시작과 끝)
-    const startDate = new Date(date);
+    // 날짜 범위 설정 (해당 날짜의 시작과 끝) - timezone-aware
+    const startDate = getTimezoneAwareDate(new Date(date));
     startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
+    const endDate = getTimezoneAwareDate(new Date(date));
     endDate.setHours(23, 59, 59, 999);
 
     console.log('Fetching sessions for date:', date, 'User:', user.id);
@@ -113,7 +114,7 @@ export async function createOrUpdateJournal(date: string, content: string) {
       user_id: user.id,
       date,
       content,
-      updated_at: new Date().toISOString(),
+      updated_at: getTimezoneAwareDate().toISOString(),
     }, {
       onConflict: 'user_id,date',
     })

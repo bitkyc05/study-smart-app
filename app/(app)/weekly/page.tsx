@@ -4,6 +4,7 @@ import { startOfWeek, endOfWeek, parseISO, format } from 'date-fns'
 import { redirect } from 'next/navigation'
 import WeeklyView from '@/components/weekly/WeeklyView'
 import WeeklyViewSkeleton from '@/components/weekly/WeeklyViewSkeleton'
+import { getTimezoneAwareDate } from '@/lib/date-utils'
 
 export default async function WeeklyPage({
   searchParams
@@ -17,11 +18,11 @@ export default async function WeeklyPage({
     redirect('/login')
   }
 
-  // Parse the date from URL or use current date
+  // Parse the date from URL or use current date (timezone-aware)
   const params = await searchParams
   const targetDate = params.date 
     ? parseISO(params.date) 
-    : new Date()
+    : getTimezoneAwareDate()
   
   // Calculate week boundaries (Monday start)
   const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 })

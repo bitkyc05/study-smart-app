@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
+import { getTimezoneAwareDate } from '@/lib/date-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // 진행 중인 세션 생성인 경우
     if (status === 'in_progress') {
-      const now = new Date().toISOString()
+      const now = getTimezoneAwareDate().toISOString()
       
       const { data, error } = await supabase
         .from('study_sessions')
@@ -85,10 +86,10 @@ export async function POST(request: NextRequest) {
         duration_seconds: duration,
         actual_duration: duration,
         planned_duration_seconds: settingDuration || duration,
-        start_time: startedAt || new Date(Date.now() - duration * 1000).toISOString(),
-        end_time: new Date().toISOString(),
-        started_at: startedAt || new Date(Date.now() - duration * 1000).toISOString(),
-        ended_at: new Date().toISOString()
+        start_time: startedAt || getTimezoneAwareDate(new Date(Date.now() - duration * 1000)).toISOString(),
+        end_time: getTimezoneAwareDate().toISOString(),
+        started_at: startedAt || getTimezoneAwareDate(new Date(Date.now() - duration * 1000)).toISOString(),
+        ended_at: getTimezoneAwareDate().toISOString()
       })
       .select()
       .single()
@@ -144,11 +145,11 @@ export async function GET(request: NextRequest) {
       .order('end_time', { ascending: false })
       .limit(limit)
 
-    // 날짜 필터
+    // 날짜 필터 (timezone-aware)
     if (date) {
-      const startDate = new Date(date)
+      const startDate = getTimezoneAwareDate(new Date(date))
       startDate.setHours(0, 0, 0, 0)
-      const endDate = new Date(date)
+      const endDate = getTimezoneAwareDate(new Date(date))
       endDate.setHours(23, 59, 59, 999)
       
       query = query
@@ -231,7 +232,7 @@ export async function PATCH(request: NextRequest) {
       
       // 세션 완료 시 추가 처리
       if (status === 'completed' || status === 'interrupted') {
-        updateData.ended_at = new Date().toISOString()
+        updateData.ended_at = getTimezoneAwareDate().toISOString()
         updateData.end_time = updateData.ended_at // 레거시 호환성
         
         if (actualDuration !== undefined) {

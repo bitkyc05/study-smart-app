@@ -146,3 +146,13 @@ export function getMonthName(month: number): string {
   ];
   return months[month - 1] || '';
 }
+
+/**
+ * Get timezone-aware date for server-side operations
+ * Adjusts server UTC time to user's local timezone
+ */
+export function getTimezoneAwareDate(date?: Date): Date {
+  const now = date || new Date();
+  const userTimezoneOffset = now.getTimezoneOffset();
+  return new Date(now.getTime() - (userTimezoneOffset * 60000));
+}
