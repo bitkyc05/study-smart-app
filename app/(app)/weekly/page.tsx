@@ -4,7 +4,8 @@ import { startOfWeek, endOfWeek, parseISO, format } from 'date-fns'
 import { redirect } from 'next/navigation'
 import WeeklyView from '@/components/weekly/WeeklyView'
 import WeeklyViewSkeleton from '@/components/weekly/WeeklyViewSkeleton'
-import { getTimezoneAwareDate } from '@/lib/date-utils'
+import { getUserTimezone } from '@/lib/user-timezone'
+import { getCurrentDateInTimezone, userTimezoneToUtc } from '@/lib/date-utils'
 
 export default async function WeeklyPage({
   searchParams
@@ -18,15 +19,20 @@ export default async function WeeklyPage({
     redirect('/login')
   }
 
-  // Parse the date from URL or use current date (timezone-aware)
+  // Get user's timezone and calculate dates in their timezone
+  const userTimezone = await getUserTimezone()
   const params = await searchParams
   const targetDate = params.date 
     ? parseISO(params.date) 
-    : getTimezoneAwareDate()
+    : getCurrentDateInTimezone(userTimezone)
   
-  // Calculate week boundaries (Monday start)
-  const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 })
-  const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 })
+  // Calculate week boundaries (Monday start) in user's timezone
+  const weekStartInUserTz = startOfWeek(targetDate, { weekStartsOn: 1 })
+  const weekEndInUserTz = endOfWeek(targetDate, { weekStartsOn: 1 })
+  
+  // Convert to UTC for database queries
+  const weekStart = userTimezoneToUtc(weekStartInUserTz, userTimezone)
+  const weekEnd = userTimezoneToUtc(weekEndInUserTz, userTimezone)
 
   // Fetch all the data we need in parallel
   const [

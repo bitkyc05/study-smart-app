@@ -1,7 +1,8 @@
 'use server';
 
 import { getServerClient } from '@/lib/supabase/server';
-import { getTimezoneAwareDate } from '@/lib/date-utils';
+import { getUserTimezone } from '@/lib/user-timezone';
+import { userTimezoneToUtc } from '@/lib/date-utils';
 
 export interface StudySession {
   id: number;
@@ -40,10 +41,18 @@ export async function getSessionsByDate(date: string) {
     }
 
     // 날짜 범위 설정 (해당 날짜의 시작과 끝) - timezone-aware
-    const startDate = getTimezoneAwareDate(new Date(date));
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = getTimezoneAwareDate(new Date(date));
-    endDate.setHours(23, 59, 59, 999);
+    const userTimezone = await getUserTimezone();
+    const targetDate = new Date(date);
+    
+    // Set time boundaries in user's timezone
+    const startDateInUserTz = new Date(targetDate);
+    startDateInUserTz.setHours(0, 0, 0, 0);
+    const endDateInUserTz = new Date(targetDate);
+    endDateInUserTz.setHours(23, 59, 59, 999);
+    
+    // Convert to UTC for database queries
+    const startDate = userTimezoneToUtc(startDateInUserTz, userTimezone);
+    const endDate = userTimezoneToUtc(endDateInUserTz, userTimezone);
 
     console.log('Fetching sessions for date:', date, 'User:', user.id);
     console.log('Date range:', startDate.toISOString(), 'to', endDate.toISOString());
@@ -114,7 +123,7 @@ export async function createOrUpdateJournal(date: string, content: string) {
       user_id: user.id,
       date,
       content,
-      updated_at: getTimezoneAwareDate().toISOString(),
+      updated_at: new Date().toISOString(),
     }, {
       onConflict: 'user_id,date',
     })

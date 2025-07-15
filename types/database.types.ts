@@ -186,6 +186,7 @@ export type Database = {
           pomodoro_settings: Json | null
           preferences: Json | null
           study_goals: Json | null
+          timezone: string | null
           ui_settings: Json | null
           updated_at: string | null
           user_id: string
@@ -197,6 +198,7 @@ export type Database = {
           pomodoro_settings?: Json | null
           preferences?: Json | null
           study_goals?: Json | null
+          timezone?: string | null
           ui_settings?: Json | null
           updated_at?: string | null
           user_id: string
@@ -208,6 +210,7 @@ export type Database = {
           pomodoro_settings?: Json | null
           preferences?: Json | null
           study_goals?: Json | null
+          timezone?: string | null
           ui_settings?: Json | null
           updated_at?: string | null
           user_id?: string

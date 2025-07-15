@@ -6,7 +6,8 @@ import {
   ChevronRight,
   Palette,
   User,
-  BookOpen
+  BookOpen,
+  Globe
 } from 'lucide-react';
 
 const settingsSections = [
@@ -39,6 +40,13 @@ const settingsSections = [
   {
     title: 'Preferences',
     items: [
+      {
+        icon: Globe,
+        label: 'Timezone',
+        description: 'Set your timezone for accurate time display',
+        href: '/settings/timezone',
+        color: 'text-indigo-500 bg-indigo-50'
+      },
       {
         icon: Palette,
         label: 'Appearance',

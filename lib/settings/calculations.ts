@@ -2,8 +2,6 @@
  * Study goal calculation utilities
  */
 
-import { getTimezoneAwareDate } from '@/lib/date-utils';
-
 /**
  * Calculate the number of weeks remaining until D-day
  * @param dDay - Target date
@@ -11,7 +9,7 @@ import { getTimezoneAwareDate } from '@/lib/date-utils';
  */
 export const calculateWeeksRemaining = (dDay: Date | string): number => {
   const targetDate = typeof dDay === 'string' ? new Date(dDay) : dDay;
-  const today = getTimezoneAwareDate();
+  const today = new Date();
   today.setHours(0, 0, 0, 0);
   targetDate.setHours(0, 0, 0, 0);
   
@@ -99,7 +97,7 @@ export const formatMinutes = (minutes: number): string => {
  */
 export const calculateDaysRemaining = (dDay: Date | string): number => {
   const targetDate = typeof dDay === 'string' ? new Date(dDay) : dDay;
-  const today = getTimezoneAwareDate();
+  const today = new Date();
   today.setHours(0, 0, 0, 0);
   targetDate.setHours(0, 0, 0, 0);
   

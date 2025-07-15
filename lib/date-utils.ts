@@ -12,6 +12,7 @@ import {
   subMonths,
   parseISO
 } from 'date-fns';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 /**
  * Get all days to display in a calendar grid for a given month
@@ -148,11 +149,34 @@ export function getMonthName(month: number): string {
 }
 
 /**
- * Get timezone-aware date for server-side operations
- * Adjusts server UTC time to user's local timezone
+ * Timezone-aware date utilities using date-fns-tz
  */
-export function getTimezoneAwareDate(date?: Date): Date {
-  const now = date || new Date();
-  const userTimezoneOffset = now.getTimezoneOffset();
-  return new Date(now.getTime() - (userTimezoneOffset * 60000));
+
+/**
+ * Convert UTC date to user's timezone
+ * @param date UTC date
+ * @param timezone User's timezone (IANA identifier)
+ * @returns Date in user's timezone
+ */
+export function utcToUserTimezone(date: Date, timezone: string): Date {
+  return toZonedTime(date, timezone)
+}
+
+/**
+ * Convert user's timezone date to UTC
+ * @param date Date in user's timezone
+ * @param timezone User's timezone (IANA identifier)
+ * @returns UTC date
+ */
+export function userTimezoneToUtc(date: Date, timezone: string): Date {
+  return fromZonedTime(date, timezone)
+}
+
+/**
+ * Get current date in user's timezone
+ * @param timezone User's timezone (IANA identifier)
+ * @returns Current date in user's timezone
+ */
+export function getCurrentDateInTimezone(timezone: string): Date {
+  return toZonedTime(new Date(), timezone)
 }
