@@ -29,6 +29,7 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
     state: 'idle' as TimerState,
     sessionType: 'study',
     subjectId: null,
+    currentSessionId: null,
     settingDuration: DEFAULT_SETTINGS.studyDuration,
     timeRemaining: DEFAULT_SETTINGS.studyDuration,
     overtimeElapsed: 0,
@@ -42,9 +43,32 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
     notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
 
     actions: {
-      startStudy: (subjectId) => {
+      startStudy: async (subjectId) => {
         const { state, workerRef, settings } = get()
         if (state !== 'idle') return
+        
+        // 세션 생성
+        try {
+          const response = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subjectId,
+              sessionType: 'study',
+              status: 'in_progress',
+              settingDuration: settings.studyDuration
+            })
+          })
+
+          if (response.ok) {
+            const { data } = await response.json()
+            set({ currentSessionId: data.id })
+          } else {
+            console.error('Failed to create session')
+          }
+        } catch (error) {
+          console.error('Error creating session:', error)
+        }
         
         const initialAngle = (settings.studyDuration / 3600) * 360 // 60분 기준으로 각도 계산
         
@@ -68,11 +92,33 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         })
       },
 
-      startBreak: () => {
+      startBreak: async () => {
         const { state, workerRef, settings } = get()
         if (state !== 'idle') return
         
         const breakDuration = settings.shortBreakDuration // TODO: 긴 휴식 로직 추가
+        
+        // 세션 생성
+        try {
+          const response = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionType: 'short_break',
+              status: 'in_progress',
+              settingDuration: breakDuration
+            })
+          })
+
+          if (response.ok) {
+            const { data } = await response.json()
+            set({ currentSessionId: data.id })
+          } else {
+            console.error('Failed to create break session')
+          }
+        } catch (error) {
+          console.error('Error creating break session:', error)
+        }
         
         const initialAngle = (breakDuration / 3600) * 360 // 60분 기준으로 각도 계산
         
@@ -113,7 +159,23 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
       },
       
       reset: () => {
-        const { workerRef, settings } = get()
+        const { workerRef, settings, currentSessionId } = get()
+        
+        // 진행 중인 세션이 있으면 중단으로 처리
+        if (currentSessionId) {
+          try {
+            fetch('/api/sessions', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: currentSessionId,
+                status: 'interrupted'
+              })
+            })
+          } catch (error) {
+            console.error('Error interrupting session:', error)
+          }
+        }
         
         set({
           state: 'idle',
@@ -121,14 +183,15 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
           overtimeElapsed: 0,
           dialAngle: 0,
           completedRings: 0,
-          currentRingAngle: 0
+          currentRingAngle: 0,
+          currentSessionId: null
         })
         
         workerRef?.postMessage({ command: 'reset' })
       },
       
       stop: async () => {
-        const { state, sessionType, overtimeElapsed, settingDuration, subjectId, workerRef, timeRemaining } = get()
+        const { state, sessionType, overtimeElapsed, settingDuration, currentSessionId, workerRef, timeRemaining } = get()
         
         // 휴식 중이거나 초과시간 상태일 때만 stop 가능
         if (!(sessionType === 'break' && state === 'countdown') && 
@@ -140,34 +203,34 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
           ? settingDuration - timeRemaining 
           : settingDuration + overtimeElapsed
         
-        // 세션 기록 저장
-        try {
-          const response = await fetch('/api/sessions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              subjectId,
-              sessionType,
-              duration: totalDuration,
-              settingDuration,
-              overtimeElapsed,
-              startedAt: new Date(Date.now() - totalDuration * 1000).toISOString()
-            })
-          })
-
-          if (!response.ok) {
-            console.error('Failed to save session')
-          } else {
-            // 성공 알림
-            if (get().notificationSettings.desktop && 'Notification' in window && Notification.permission === 'granted') {
-              new Notification('세션 저장 완료', {
-                body: `${Math.floor(totalDuration / 60)}분 학습 기록이 저장되었습니다.`,
-                icon: '/favicon.ico'
+        // 현재 세션 업데이트
+        if (currentSessionId) {
+          try {
+            const response = await fetch('/api/sessions', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: currentSessionId,
+                status: 'completed',
+                actualDuration: totalDuration,
+                overtimeDuration: overtimeElapsed
               })
+            })
+
+            if (!response.ok) {
+              console.error('Failed to update session')
+            } else {
+              // 성공 알림
+              if (get().notificationSettings.desktop && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification('세션 저장 완료', {
+                  body: `${Math.floor(totalDuration / 60)}분 학습 기록이 저장되었습니다.`,
+                  icon: '/favicon.ico'
+                })
+              }
             }
+          } catch (error) {
+            console.error('Error updating session:', error)
           }
-        } catch (error) {
-          console.error('Error saving session:', error)
         }
         
         const { settings } = get()
@@ -180,7 +243,8 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
           overtimeElapsed: 0,
           dialAngle: initialAngle,
           completedRings: 0,
-          currentRingAngle: initialAngle
+          currentRingAngle: initialAngle,
+          currentSessionId: null
         })
         
         workerRef?.postMessage({ command: 'stop' })
@@ -348,6 +412,68 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
             dialAngle: angle,
             currentRingAngle: angle
           })
+        }
+      },
+
+      // 진행 중인 세션 복구
+      recoverSession: async () => {
+        try {
+          const response = await fetch('/api/sessions?status=in_progress&limit=1')
+          if (response.ok) {
+            const { data } = await response.json()
+            if (data && data.length > 0) {
+              const session = data[0]
+              
+              // 세션이 24시간 이상 지났으면 중단 처리
+              const startTime = new Date(session.started_at).getTime()
+              const now = Date.now()
+              const elapsed = (now - startTime) / 1000 // 초 단위
+              
+              if (elapsed > 24 * 60 * 60) {
+                // 24시간 초과, 세션 중단 처리
+                await fetch('/api/sessions', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    sessionId: session.id,
+                    status: 'interrupted'
+                  })
+                })
+                return
+              }
+              
+              // 세션 복구
+              const remainingTime = session.planned_duration_seconds - Math.min(elapsed, session.planned_duration_seconds)
+              
+              set({
+                currentSessionId: session.id,
+                sessionType: session.session_type === 'study' ? 'study' : 'break',
+                subjectId: session.subject_id,
+                settingDuration: session.planned_duration_seconds,
+                timeRemaining: Math.max(0, remainingTime),
+                state: remainingTime > 0 ? 'paused' : 'idle'
+              })
+              
+              // 남은 시간이 있으면 일시정지 상태로 표시
+              if (remainingTime > 0) {
+                const angle = (remainingTime / 3600) * 360
+                set({ 
+                  dialAngle: angle,
+                  currentRingAngle: angle
+                })
+                
+                // 사용자에게 복구 알림
+                if ('Notification' in window && Notification.permission === 'granted') {
+                  new Notification('진행 중인 세션 발견', {
+                    body: '이전에 진행 중이던 세션이 복구되었습니다.',
+                    icon: '/favicon.ico'
+                  })
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error recovering session:', error)
         }
       }
     }

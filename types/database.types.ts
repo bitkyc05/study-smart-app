@@ -49,38 +49,59 @@ export type Database = {
       }
       study_sessions: {
         Row: {
+          actual_duration: number | null
           created_at: string | null
           duration_seconds: number
           end_time: string
+          ended_at: string | null
           id: number
           notes: string | null
+          overtime_duration: number | null
           planned_duration_seconds: number | null
+          pomodoro_cycle_id: string | null
+          pomodoro_session_sequence: number | null
           session_type: string
           start_time: string
+          started_at: string | null
+          status: string | null
           subject_id: number | null
           user_id: string
         }
         Insert: {
+          actual_duration?: number | null
           created_at?: string | null
           duration_seconds: number
           end_time: string
+          ended_at?: string | null
           id?: number
           notes?: string | null
+          overtime_duration?: number | null
           planned_duration_seconds?: number | null
+          pomodoro_cycle_id?: string | null
+          pomodoro_session_sequence?: number | null
           session_type: string
           start_time: string
+          started_at?: string | null
+          status?: string | null
           subject_id?: number | null
           user_id: string
         }
         Update: {
+          actual_duration?: number | null
           created_at?: string | null
           duration_seconds?: number
           end_time?: string
+          ended_at?: string | null
           id?: number
           notes?: string | null
+          overtime_duration?: number | null
           planned_duration_seconds?: number | null
+          pomodoro_cycle_id?: string | null
+          pomodoro_session_sequence?: number | null
           session_type?: string
           start_time?: string
+          started_at?: string | null
+          status?: string | null
           subject_id?: number | null
           user_id?: string
         }
