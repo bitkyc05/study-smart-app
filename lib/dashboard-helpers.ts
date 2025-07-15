@@ -38,8 +38,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return null
 
-    // Get date ranges
-    const today = new Date()
+    // Get date ranges (adjust for user timezone)
+    const now = new Date()
+    const userTimezoneOffset = now.getTimezoneOffset()
+    const today = new Date(now.getTime() - (userTimezoneOffset * 60000))
     const todayStart = startOfDay(today)
     const weekStart = startOfWeek(today)
     const sevenDaysAgo = subDays(today, 6)

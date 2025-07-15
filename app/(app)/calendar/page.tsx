@@ -7,7 +7,9 @@ export default async function CalendarPage({
   searchParams: Promise<{ year?: string; month?: string }>;
 }) {
   const params = await searchParams;
-  const currentDate = new Date();
+  const now = new Date();
+  const userTimezoneOffset = now.getTimezoneOffset();
+  const currentDate = new Date(now.getTime() - (userTimezoneOffset * 60000));
   const year = parseInt(params.year || currentDate.getFullYear().toString());
   const month = parseInt(params.month || (currentDate.getMonth() + 1).toString());
   
