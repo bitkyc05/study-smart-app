@@ -6,6 +6,7 @@ import type {
   TimerSettings,
   NotificationSettings 
 } from '@/types/timer.types'
+import { fetchWithOfflineSupport } from '@/lib/utils/offlineQueue'
 
 const DEFAULT_SETTINGS: TimerSettings = {
   studyDuration: 25 * 60,      // 25분
@@ -49,7 +50,7 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         
         // 세션 생성
         try {
-          const response = await fetch('/api/sessions', {
+          const response = await fetchWithOfflineSupport('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -57,12 +58,18 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
               sessionType: 'study',
               status: 'in_progress',
               settingDuration: settings.studyDuration
-            })
+            }),
+            offlineQueueType: 'session'
           })
 
-          if (response.ok) {
+          if (response && response.ok) {
             const { data } = await response.json()
             set({ currentSessionId: data.id })
+          } else if (!response) {
+            // 오프라인 큐에 추가됨 - 임시 ID 생성
+            const tempId = `offline-${Date.now()}`
+            set({ currentSessionId: tempId })
+            console.log('Session creation queued for offline sync')
           } else {
             console.error('Failed to create session')
           }
@@ -100,19 +107,25 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         
         // 세션 생성
         try {
-          const response = await fetch('/api/sessions', {
+          const response = await fetchWithOfflineSupport('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               sessionType: 'short_break',
               status: 'in_progress',
               settingDuration: breakDuration
-            })
+            }),
+            offlineQueueType: 'session'
           })
 
-          if (response.ok) {
+          if (response && response.ok) {
             const { data } = await response.json()
             set({ currentSessionId: data.id })
+          } else if (!response) {
+            // 오프라인 큐에 추가됨 - 임시 ID 생성
+            const tempId = `offline-${Date.now()}`
+            set({ currentSessionId: tempId })
+            console.log('Break session creation queued for offline sync')
           } else {
             console.error('Failed to create break session')
           }
@@ -162,15 +175,16 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         const { workerRef, settings, currentSessionId } = get()
         
         // 진행 중인 세션이 있으면 중단으로 처리
-        if (currentSessionId) {
+        if (currentSessionId && !currentSessionId.startsWith('offline-')) {
           try {
-            fetch('/api/sessions', {
+            fetchWithOfflineSupport('/api/sessions', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 sessionId: currentSessionId,
                 status: 'interrupted'
-              })
+              }),
+              offlineQueueType: 'session'
             })
           } catch (error) {
             console.error('Error interrupting session:', error)
@@ -204,9 +218,9 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
           : settingDuration + overtimeElapsed
         
         // 현재 세션 업데이트
-        if (currentSessionId) {
+        if (currentSessionId && !currentSessionId.startsWith('offline-')) {
           try {
-            const response = await fetch('/api/sessions', {
+            const response = await fetchWithOfflineSupport('/api/sessions', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -214,12 +228,11 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
                 status: 'completed',
                 actualDuration: totalDuration,
                 overtimeDuration: overtimeElapsed
-              })
+              }),
+              offlineQueueType: 'session'
             })
 
-            if (!response.ok) {
-              console.error('Failed to update session')
-            } else {
+            if (response && response.ok) {
               // 성공 알림
               if (get().notificationSettings.desktop && 'Notification' in window && Notification.permission === 'granted') {
                 new Notification('세션 저장 완료', {
@@ -227,6 +240,17 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
                   icon: '/favicon.ico'
                 })
               }
+            } else if (!response) {
+              // 오프라인 큐에 추가됨
+              console.log('Session completion queued for offline sync')
+              if (get().notificationSettings.desktop && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification('세션 저장 대기 중', {
+                  body: `오프라인 상태입니다. ${Math.floor(totalDuration / 60)}분 학습 기록이 나중에 동기화됩니다.`,
+                  icon: '/favicon.ico'
+                })
+              }
+            } else {
+              console.error('Failed to update session')
             }
           } catch (error) {
             console.error('Error updating session:', error)
@@ -431,13 +455,14 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
               
               if (elapsed > 24 * 60 * 60) {
                 // 24시간 초과, 세션 중단 처리
-                await fetch('/api/sessions', {
+                await fetchWithOfflineSupport('/api/sessions', {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     sessionId: session.id,
                     status: 'interrupted'
-                  })
+                  }),
+                  offlineQueueType: 'session'
                 })
                 return
               }
