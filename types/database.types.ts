@@ -142,6 +142,78 @@ export type Database = {
         }
         Relationships: []
       }
+      goals: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number
+          is_completed: boolean | null
+          target_date: string | null
+          target_minutes: number | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_completed?: boolean | null
+          target_date?: string | null
+          target_minutes?: number | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_completed?: boolean | null
+          target_date?: string | null
+          target_minutes?: number | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          id: number
+          notification_settings: Json | null
+          pomodoro_settings: Json | null
+          preferences: Json | null
+          study_goals: Json | null
+          ui_settings: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          notification_settings?: Json | null
+          pomodoro_settings?: Json | null
+          preferences?: Json | null
+          study_goals?: Json | null
+          ui_settings?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          notification_settings?: Json | null
+          pomodoro_settings?: Json | null
+          preferences?: Json | null
+          study_goals?: Json | null
+          ui_settings?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

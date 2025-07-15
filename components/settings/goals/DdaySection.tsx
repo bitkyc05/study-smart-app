@@ -14,7 +14,7 @@ export default function DdaySection({
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedTitle, setSelectedTitle] = useState(title || '')
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null)
-  const [urgencyLevel, setUrgencyLevel] = useState<string>('low')
+  const [urgencyLevel, setUrgencyLevel] = useState<'low' | 'medium' | 'high' | 'critical'>('low')
 
   useEffect(() => {
     if (value) {
@@ -135,7 +135,7 @@ export default function DdaySection({
           <div className="p-3 bg-color-warning bg-opacity-10 rounded-lg">
             <p className="text-sm text-color-warning">
               ⚠️ Changing D-Day will reset your accumulated study time. 
-              You'll be asked to confirm this change.
+              You&apos;ll be asked to confirm this change.
             </p>
           </div>
         )}

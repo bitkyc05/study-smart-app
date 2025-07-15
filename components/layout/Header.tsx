@@ -10,7 +10,7 @@ interface UserMenuProps {
   onToggle: () => void
   onSignOut: () => void
   userEmail?: string | null
-  router: any
+  router: ReturnType<typeof useRouter>
 }
 
 function UserMenu({ isOpen, onToggle, onSignOut, userEmail, router }: UserMenuProps) {

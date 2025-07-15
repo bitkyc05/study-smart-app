@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeftIcon } from '@heroicons/react/24/outline'
 import { useGoalSettingsStore } from '@/store/useGoalSettingsStore'
@@ -30,7 +30,6 @@ export default function GoalsSettingsPage() {
     confirmDdayChange,
     updateTotalGoal,
     updateSubjectAllocation,
-    rebalanceAllocations,
     saveSettings,
     resetChanges,
     setTempDday
@@ -48,7 +47,7 @@ export default function GoalsSettingsPage() {
       // If no allocations exist, initialize with equal distribution
       handleRebalance()
     }
-  }, [subjects, settings])
+  }, [subjects, settings]) // handleRebalance is stable due to useCallback
 
   const fetchSubjects = async () => {
     try {
@@ -90,7 +89,7 @@ export default function GoalsSettingsPage() {
     // Show success message (you could add a toast notification here)
   }
 
-  const handleRebalance = () => {
+  const handleRebalance = useCallback(() => {
     if (!settings || subjects.length === 0) return
     
     // Initialize allocations for all subjects with equal proportions
@@ -99,7 +98,7 @@ export default function GoalsSettingsPage() {
     subjects.forEach(subject => {
       updateSubjectAllocation(subject.id.toString(), equalProportion)
     })
-  }
+  }, [settings, subjects, updateSubjectAllocation])
 
   const remainingWeeks = settings?.d_day 
     ? calculateWeeksRemaining(new Date(settings.d_day))

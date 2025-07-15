@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getServerClient } from '@/lib/supabase/server'
 import { StudyGoalSettings } from '@/types/settings'
+import { Json } from '@/types/database.types'
 
 export async function GET() {
-  const supabase = await createClient()
+  const supabase = await getServerClient()
 
   // Get authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -25,7 +26,7 @@ export async function GET() {
   }
 
   // Return study goals or default values
-  const studyGoals: StudyGoalSettings = settings?.study_goals || {
+  const studyGoals: StudyGoalSettings = (settings?.study_goals as unknown as StudyGoalSettings) || {
     d_day: null,
     d_day_title: '',
     d_day_created_at: null,
@@ -40,7 +41,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = await createClient()
+  const supabase = await getServerClient()
 
   // Get authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -57,7 +58,7 @@ export async function PATCH(request: Request) {
       .from('user_settings')
       .upsert({
         user_id: user.id,
-        study_goals: studyGoals,
+        study_goals: studyGoals as unknown as Json,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', user.id)

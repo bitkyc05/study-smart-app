@@ -4,7 +4,6 @@ import {
   Bell, 
   Clock,
   ChevronRight,
-  Settings,
   Palette,
   User
 } from 'lucide-react';

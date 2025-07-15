@@ -109,7 +109,7 @@ export default function SubjectAllocationSection({
               {' '}({Math.round(unallocatedProportion * 100)}%)
             </p>
             <p className="text-xs text-text-secondary mt-1">
-              This time will be automatically assigned to "Other" category if enabled.
+              This time will be automatically assigned to &quot;Other&quot; category if enabled.
             </p>
           </div>
         )}
