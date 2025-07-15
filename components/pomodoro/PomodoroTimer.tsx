@@ -37,27 +37,14 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
     }
   }, [])
   
-  // 페이지 종료 시 세션 중단 처리
+  // 페이지 종료 시 경고만 표시 (세션은 저장하지 않음)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const currentSessionId = usePomodoroStore.getState().currentSessionId
       const currentState = usePomodoroStore.getState().state
+      const sessionType = usePomodoroStore.getState().sessionType
       
-      // 진행 중인 세션이 있을 때만 처리
-      if (currentSessionId && (currentState === 'countdown' || currentState === 'paused')) {
-        // keepalive 옵션을 사용하여 페이지 종료 시에도 요청 전송
-        fetch('/api/sessions', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: currentSessionId,
-            status: 'interrupted'
-          }),
-          keepalive: true
-        }).catch(() => {
-          // 에러 무시 (페이지가 종료되는 중이므로)
-        })
-        
+      // 학습 세션이 진행 중일 때만 경고
+      if (sessionType === 'study' && (currentState === 'countdown' || currentState === 'paused')) {
         // 일부 브라우저에서 확인 대화상자 표시
         e.preventDefault()
         e.returnValue = ''

@@ -14,6 +14,7 @@ export interface TimerContext {
   sessionType: SessionType
   subjectId: string | null
   currentSessionId: string | number | null // 현재 진행 중인 세션 ID
+  sessionStartTime?: number      // 세션 시작 시간 (타임스탬프)
   
   // Time values (seconds)
   settingDuration: number        // 설정된 시간
