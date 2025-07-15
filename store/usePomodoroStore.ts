@@ -396,7 +396,9 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
       
       initializeWorker: () => {
         if (typeof window !== 'undefined' && !get().workerRef) {
-          const worker = new Worker('/pomodoro-worker.js')
+          // Next.js에서 Worker를 정적 분석 가능하게 만들기 위한 방법
+          const workerUrl = new URL('/pomodoro-worker.js', window.location.origin).href
+          const worker = new Worker(workerUrl)
           
           worker.onmessage = (e) => {
             get().actions.handleWorkerMessage(e.data)

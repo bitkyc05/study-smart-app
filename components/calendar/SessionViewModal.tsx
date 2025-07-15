@@ -64,9 +64,9 @@ export function SessionViewModal({ isOpen, onClose, date }: SessionViewModalProp
           <span>{formattedDate}</span>
         </div>
       }
-      className="max-h-[80vh] overflow-hidden flex flex-col"
+      className="max-h-[80vh]"
     >
-      <div className="flex-1 overflow-y-auto">
+      <div className="max-h-[60vh] overflow-y-auto -mx-6 px-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />

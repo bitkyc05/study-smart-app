@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
         subjects (
           id,
           name,
-          color
+          color_hex
         )
       `)
       .eq('user_id', user.id)
