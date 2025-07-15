@@ -1,7 +1,7 @@
 'use client'
 
 import { UserCircleIcon } from '@heroicons/react/24/outline'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useRouter } from 'next/navigation'
 
@@ -58,16 +58,20 @@ function UserMenu({ isOpen, onToggle, onSignOut, userEmail, router }: UserMenuPr
 
 export function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [formattedDate, setFormattedDate] = useState('')
   const { user, signOut } = useAuth()
   const router = useRouter()
   
-  const today = new Date()
-  const formattedDate = today.toLocaleDateString(undefined, { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })
+  useEffect(() => {
+    const today = new Date()
+    const dateString = today.toLocaleDateString(undefined, { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+    setFormattedDate(dateString)
+  }, [])
   
   const handleSignOut = async () => {
     await signOut()
@@ -79,7 +83,7 @@ export function Header() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-caption text-text-secondary">
-            {formattedDate}
+            {formattedDate || 'Loading...'}
           </p>
         </div>
         
