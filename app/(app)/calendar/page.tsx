@@ -29,8 +29,9 @@ export default async function CalendarPage({
   // Fetch calendar data using the existing RPC function
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: calendarData, error } = await (supabase as any).rpc('get_monthly_calendar_data', {
-    p_year: year,
-    p_month: month,
+    year: year,
+    month: month,
+    p_user_id: user.id,
   });
   
   if (error) {

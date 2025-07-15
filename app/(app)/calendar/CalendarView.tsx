@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MonthlyHeatmap } from '@/components/calendar/MonthlyHeatmap';
 import { MonthSelector } from '@/components/calendar/MonthSelector';
+import { SessionViewModal } from '@/components/calendar/SessionViewModal';
 import { transformToHeatmapData, type CalendarData } from '@/lib/calendar-utils';
 import { createClient } from '@/lib/supabase/client';
 
@@ -45,10 +46,19 @@ export default function CalendarView({
     try {
       // Fetch new data
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error('User not authenticated');
+        setIsLoading(false);
+        return;
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: calendarData, error } = await (supabase as any).rpc('get_monthly_calendar_data', {
-        p_year: newYear,
-        p_month: newMonth,
+        year: newYear,
+        month: newMonth,
+        p_user_id: user.id,
       });
 
       if (error) throw error;
@@ -64,8 +74,6 @@ export default function CalendarView({
   // Handle date click
   const handleDateClick = useCallback((date: string) => {
     setSelectedDate(date);
-    // For now, just log the date. In Phase 4, this will open the SessionViewModal
-    console.log('Date clicked:', date);
   }, []);
 
   return (
@@ -120,26 +128,12 @@ export default function CalendarView({
         </div>
       </div>
 
-      {/* Placeholder for SessionViewModal - will be implemented in Phase 4 */}
-      {selectedDate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Session Details</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Selected date: {selectedDate}
-            </p>
-            <p className="text-sm text-gray-500 mt-2">
-              (Session view modal will be implemented in Phase 4)
-            </p>
-            <button
-              onClick={() => setSelectedDate(null)}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Session View Modal */}
+      <SessionViewModal
+        isOpen={!!selectedDate}
+        onClose={() => setSelectedDate(null)}
+        date={selectedDate || ''}
+      />
     </div>
   );
 }
