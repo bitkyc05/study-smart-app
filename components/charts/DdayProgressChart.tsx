@@ -241,9 +241,21 @@ export function DdayProgressChart() {
     }
 
     // Create chart data with target line
-    const chartData = monthlyData.dailyProgress.map((day, index) => {
-      const daysSinceStart = index + 1
-      const targetMinutes = monthlyData.carryOverMinutes + (daysSinceStart * monthlyData.dailyGoal)
+    const ddayStartDate = new Date(monthlyData.effectiveStartDate)
+    ddayStartDate.setHours(0, 0, 0, 0)
+    
+    const chartData = monthlyData.dailyProgress.map((day) => {
+      const currentDate = new Date(day.date)
+      currentDate.setHours(0, 0, 0, 0)
+      
+      let targetMinutes = monthlyData.carryOverMinutes
+      
+      // Only accumulate target if current date is on or after D-day start
+      if (currentDate >= ddayStartDate) {
+        const daysSinceStart = Math.floor((currentDate.getTime() - ddayStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        targetMinutes = monthlyData.carryOverMinutes + (daysSinceStart * monthlyData.dailyGoal)
+      }
+      
       return {
         date: day.date,
         actual: day.minutes,
