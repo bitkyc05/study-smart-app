@@ -518,6 +518,92 @@ export type Database = {
         }
         Relationships: []
       }
+      api_key_metadata: {
+        Row: {
+          id: string
+          user_id: string
+          provider: string
+          key_id: string
+          encrypted_hint: string | null
+          is_active: boolean
+          created_at: string
+          last_used_at: string | null
+          expires_at: string | null
+          usage_count: number
+          custom_url: string | null
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: string
+          key_id: string
+          encrypted_hint?: string | null
+          is_active?: boolean
+          created_at?: string
+          last_used_at?: string | null
+          expires_at?: string | null
+          usage_count?: number
+          custom_url?: string | null
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: string
+          key_id?: string
+          encrypted_hint?: string | null
+          is_active?: boolean
+          created_at?: string
+          last_used_at?: string | null
+          expires_at?: string | null
+          usage_count?: number
+          custom_url?: string | null
+          metadata?: Json
+        }
+        Relationships: []
+      }
+      api_key_access_log: {
+        Row: {
+          id: string
+          key_id: string | null
+          accessed_at: string
+          access_type: string
+          ip_address: string | null
+          user_agent: string | null
+          success: boolean
+          error_message: string | null
+        }
+        Insert: {
+          id?: string
+          key_id?: string | null
+          accessed_at?: string
+          access_type: string
+          ip_address?: string | null
+          user_agent?: string | null
+          success: boolean
+          error_message?: string | null
+        }
+        Update: {
+          id?: string
+          key_id?: string | null
+          accessed_at?: string
+          access_type?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          success?: boolean
+          error_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_access_log_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_key_metadata"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -759,6 +845,42 @@ export type Database = {
       vector_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      store_api_key: {
+        Args: {
+          p_user_id: string
+          p_provider: string
+          p_api_key: string
+          p_custom_url?: string | null
+        }
+        Returns: string
+      }
+      get_decrypted_api_key: {
+        Args: {
+          p_user_id: string
+          p_provider: string
+        }
+        Returns: string | null
+      }
+      decrypt_key_hint: {
+        Args: {
+          p_user_id: string
+          p_encrypted_hint: string
+        }
+        Returns: string | null
+      }
+      delete_api_key: {
+        Args: {
+          p_user_id: string
+          p_provider: string
+        }
+        Returns: boolean
+      }
+      increment_key_usage: {
+        Args: {
+          p_key_id: string
+        }
+        Returns: void
       }
     }
     Enums: {

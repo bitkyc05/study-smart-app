@@ -1,0 +1,299 @@
+import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface ChatRequest {
+  messages: Message[]
+  provider: string
+  model?: string
+  temperature?: number
+  maxTokens?: number
+  stream?: boolean
+}
+
+interface Message {
+  role: 'user' | 'assistant' | 'system'
+  content: string
+}
+
+serve(async (req) => {
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    // Create Supabase client with service role
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Get auth token from header
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Verify JWT and get user
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Parse request body
+    const body: ChatRequest = await req.json()
+    const { messages, provider, model, temperature, maxTokens, stream } = body
+
+    // Get API key from vault
+    const { data: apiKey, error: keyError } = await supabase.rpc('get_decrypted_api_key', {
+      p_user_id: user.id,
+      p_provider: provider
+    })
+
+    if (keyError || !apiKey) {
+      return new Response(
+        JSON.stringify({ error: 'API key not found or inactive' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Get custom URL if provider is custom
+    let customUrl: string | undefined
+    if (provider === 'custom') {
+      const { data: metadata } = await supabase
+        .from('api_key_metadata')
+        .select('custom_url')
+        .eq('user_id', user.id)
+        .eq('provider', provider)
+        .single()
+      
+      customUrl = metadata?.custom_url
+    }
+
+    // Call the appropriate AI provider
+    let response: Response
+    switch (provider) {
+      case 'openai':
+        response = await callOpenAI(apiKey, messages, model, temperature, maxTokens, stream)
+        break
+      case 'anthropic':
+        response = await callAnthropic(apiKey, messages, model, temperature, maxTokens, stream)
+        break
+      case 'google':
+        response = await callGoogle(apiKey, messages, model, temperature, maxTokens, stream)
+        break
+      case 'grok':
+        response = await callGrok(apiKey, messages, model, temperature, maxTokens, stream)
+        break
+      case 'custom':
+        response = await callCustom(apiKey, messages, model, temperature, maxTokens, stream, customUrl)
+        break
+      default:
+        return new Response(
+          JSON.stringify({ error: 'Unknown provider' }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+    }
+
+    // Return the AI response with CORS headers
+    const responseHeaders = new Headers(response.headers)
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      responseHeaders.set(key, value)
+    })
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: responseHeaders
+    })
+
+  } catch (error) {
+    console.error('Error in chat function:', error)
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
+  }
+})
+
+// Provider-specific functions
+async function callOpenAI(
+  apiKey: string,
+  messages: Message[],
+  model = 'gpt-3.5-turbo',
+  temperature = 0.7,
+  maxTokens = 4096,
+  stream = false
+): Promise<Response> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      stream
+    })
+  })
+
+  return response
+}
+
+async function callAnthropic(
+  apiKey: string,
+  messages: Message[],
+  model = 'claude-3-haiku-20240307',
+  temperature = 0.7,
+  maxTokens = 4096,
+  stream = false
+): Promise<Response> {
+  // Convert messages to Anthropic format
+  const anthropicMessages = messages.filter(m => m.role !== 'system').map(m => ({
+    role: m.role === 'user' ? 'user' : 'assistant',
+    content: m.content
+  }))
+
+  const systemMessage = messages.find(m => m.role === 'system')?.content
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: anthropicMessages,
+      system: systemMessage,
+      temperature,
+      max_tokens: maxTokens,
+      stream
+    })
+  })
+
+  return response
+}
+
+async function callGoogle(
+  apiKey: string,
+  messages: Message[],
+  model = 'gemini-pro',
+  temperature = 0.7,
+  maxTokens = 4096,
+  stream = false
+): Promise<Response> {
+  // Convert messages to Google format
+  const contents = messages.filter(m => m.role !== 'system').map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }))
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+        }
+      })
+    }
+  )
+
+  return response
+}
+
+async function callGrok(
+  apiKey: string,
+  messages: Message[],
+  model = 'grok-1',
+  temperature = 0.7,
+  maxTokens = 4096,
+  stream = false
+): Promise<Response> {
+  // Grok uses OpenAI-compatible API
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      stream
+    })
+  })
+
+  return response
+}
+
+async function callCustom(
+  apiKey: string,
+  messages: Message[],
+  model = 'custom-model',
+  temperature = 0.7,
+  maxTokens = 4096,
+  stream = false,
+  customUrl?: string
+): Promise<Response> {
+  if (!customUrl) {
+    throw new Error('Custom URL is required for custom provider')
+  }
+
+  // Assume OpenAI-compatible API
+  const response = await fetch(`${customUrl}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      stream
+    })
+  })
+
+  return response
+}

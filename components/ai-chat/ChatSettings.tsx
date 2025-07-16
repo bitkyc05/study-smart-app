@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAIChatStore } from '@/store/useAIChatStore';
-import { X, ChevronDown } from 'lucide-react';
+import { X, ChevronDown, Settings, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import APIKeyManager from './APIKeyManager';
 
 interface ChatSettingsProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+type TabType = 'settings' | 'api-keys';
 
 const PROVIDER_OPTIONS = {
   openai: {
@@ -34,8 +38,20 @@ const PROVIDER_OPTIONS = {
 export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
   const { providerSettings, setProviderSettings } = useAIChatStore();
   const [selectedProvider, setSelectedProvider] = useState<keyof typeof PROVIDER_OPTIONS>('openai');
+  const [activeTab, setActiveTab] = useState<TabType>('settings');
+  const [userId, setUserId] = useState<string | null>(null);
 
   const currentSettings = providerSettings[selectedProvider];
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSettingChange = (key: string, value: string | number) => {
     setProviderSettings(selectedProvider, {
@@ -48,7 +64,7 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <div className="w-full max-w-2xl bg-card rounded-lg shadow-lg">
+      <div className="w-full max-w-3xl bg-card rounded-lg shadow-lg max-h-[90vh] overflow-hidden flex flex-col">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">AI 설정</h2>
@@ -60,29 +76,67 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
           </button>
         </div>
 
-        {/* 프로바이더 선택 */}
-        <div className="p-4 border-b">
-          <label className="block text-sm font-medium mb-2">AI 프로바이더</label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {Object.entries(PROVIDER_OPTIONS).map(([key, provider]) => (
-              <button
-                key={key}
-                onClick={() => setSelectedProvider(key as keyof typeof PROVIDER_OPTIONS)}
-                className={cn(
-                  "p-2 rounded-lg border transition-colors",
-                  selectedProvider === key
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "hover:bg-muted"
-                )}
-              >
-                {provider.name}
-              </button>
-            ))}
-          </div>
+        {/* 탭 네비게이션 */}
+        <div className="flex border-b">
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative",
+              activeTab === 'settings' 
+                ? "text-primary" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Settings className="w-4 h-4" />
+            모델 설정
+            {activeTab === 'settings' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('api-keys')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative",
+              activeTab === 'api-keys' 
+                ? "text-primary" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Key className="w-4 h-4" />
+            API 키 관리
+            {activeTab === 'api-keys' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
         </div>
 
-        {/* 설정 내용 */}
-        <div className="p-4 space-y-4">
+        {/* 탭 컨텐츠 */}
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'settings' ? (
+            <>
+              {/* 프로바이더 선택 */}
+              <div className="p-4 border-b">
+                <label className="block text-sm font-medium mb-2">AI 프로바이더</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {Object.entries(PROVIDER_OPTIONS).map(([key, provider]) => (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedProvider(key as keyof typeof PROVIDER_OPTIONS)}
+                      className={cn(
+                        "p-2 rounded-lg border transition-colors",
+                        selectedProvider === key
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      {provider.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 설정 내용 */}
+              <div className="p-4 space-y-4">
           {/* 모델 선택 */}
           <div>
             <label className="block text-sm font-medium mb-2">모델</label>
@@ -148,17 +202,31 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
             />
           </div>
 
-          {/* 커스텀 URL (custom provider용) */}
-          {selectedProvider === 'custom' && (
-            <div>
-              <label className="block text-sm font-medium mb-2">API 엔드포인트 URL</label>
-              <input
-                type="url"
-                value={currentSettings.customUrl || ''}
-                onChange={(e) => handleSettingChange('customUrl', e.target.value)}
-                placeholder="https://api.example.com/v1/chat"
-                className="w-full px-3 py-2 bg-muted rounded-lg outline-none focus:ring-2 focus:ring-primary"
-              />
+                {/* 커스텀 URL (custom provider용) */}
+                {selectedProvider === 'custom' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">API 엔드포인트 URL</label>
+                    <input
+                      type="url"
+                      value={currentSettings.customUrl || ''}
+                      onChange={(e) => handleSettingChange('customUrl', e.target.value)}
+                      placeholder="https://api.example.com/v1/chat"
+                      className="w-full px-3 py-2 bg-muted rounded-lg outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            /* API 키 관리 탭 */
+            <div className="p-4">
+              {userId ? (
+                <APIKeyManager userId={userId} />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  로그인이 필요합니다
+                </div>
+              )}
             </div>
           )}
         </div>
