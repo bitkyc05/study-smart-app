@@ -67,6 +67,7 @@ export async function getSessionsByDate(date: string) {
         )
       `)
       .eq('user_id', user.id)
+      .eq('session_type', 'study') // Filter for study sessions only
       .gte('end_time', startDate.toISOString())
       .lte('end_time', endDate.toISOString())
       .order('end_time', { ascending: false });
