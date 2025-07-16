@@ -128,7 +128,7 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
           </div>
           {completedRings > 0 && (
             <div className="text-xs text-text-secondary opacity-70 mt-1">
-              {completedRings}시간 이상 집중중
+              집중중
             </div>
           )}
         </div>

@@ -3,7 +3,7 @@
 import { UserCircleIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/providers/AuthProvider'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useGoalSettingsStore } from '@/store/useGoalSettingsStore'
 
 interface UserMenuProps {
@@ -62,6 +62,7 @@ export function Header() {
   const [formattedDate, setFormattedDate] = useState('')
   const { user, signOut } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const { settings, loadSettings } = useGoalSettingsStore()
   
   useEffect(() => {
@@ -74,6 +75,11 @@ export function Header() {
     })
     setFormattedDate(dateString)
   }, [])
+  
+  // Close dropdown menu when pathname changes
+  useEffect(() => {
+    setIsUserMenuOpen(false)
+  }, [pathname])
   
   useEffect(() => {
     // Load goal settings when component mounts
