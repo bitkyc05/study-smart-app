@@ -8,7 +8,8 @@ import {
   CalendarDaysIcon,
   ChartBarIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 
 const sidebarItems = [
@@ -16,6 +17,7 @@ const sidebarItems = [
   { name: 'Pomodoro', icon: ClockIcon, href: '/pomodoro' },
   { name: 'Weekly', icon: ChartBarIcon, href: '/weekly' },
   { name: 'Calendar', icon: CalendarDaysIcon, href: '/calendar' },
+  { name: 'AI Chat', icon: ChatBubbleLeftRightIcon, href: '/ai-chat' },
 ]
 
 interface SidebarItemProps {

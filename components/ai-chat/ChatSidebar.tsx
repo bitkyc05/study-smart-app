@@ -121,10 +121,10 @@ export default function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
             <div
               key={session.id}
               className={cn(
-                "group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors",
+                "group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-body-md font-medium",
                 activeSessionId === session.id
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
+                  ? "bg-accent-light text-accent-focus border-l-2 border-accent-focus ml-[-2px]"
+                  : "text-text-secondary hover:bg-accent-light hover:text-text-primary"
               )}
               onClick={() => setActiveSession(session.id)}
             >
@@ -182,17 +182,17 @@ export default function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
   return (
     <aside
       className={cn(
-        "flex flex-col bg-card border-r transition-all duration-300",
-        isOpen ? "w-80" : "w-0"
+        "relative flex flex-col bg-accent/20 border-l-2 border-accent transition-all duration-300 overflow-hidden shadow-md",
+        isOpen ? "w-80" : "w-16"
       )}
     >
-      {isOpen && (
+      {isOpen ? (
         <>
           {/* 헤더 */}
-          <div className="flex-none p-4 border-b">
+          <div className="flex-none p-4 border-b border-accent bg-background/50">
             <button
               onClick={handleCreateSession}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-focus transition-colors font-medium"
             >
               <Plus className="w-4 h-4" />
               <span>새 대화 시작</span>
@@ -229,18 +229,24 @@ export default function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
             )}
           </div>
         </>
+      ) : (
+        <div className="flex flex-col items-center py-4 space-y-4">
+          <button
+            onClick={onToggle}
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            title="사이드바 열기"
+          >
+            <MessageSquare className="w-5 h-5" />
+          </button>
+          <button
+            onClick={handleCreateSession}
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            title="새 대화 시작"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
       )}
-
-      {/* 토글 버튼 */}
-      <button
-        onClick={onToggle}
-        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full p-1 bg-card border border-l-0 rounded-r hover:bg-muted"
-      >
-        <ChevronLeft className={cn(
-          "w-4 h-4 transition-transform",
-          !isOpen && "rotate-180"
-        )} />
-      </button>
     </aside>
   );
 }

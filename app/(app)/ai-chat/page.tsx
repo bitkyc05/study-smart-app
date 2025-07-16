@@ -21,26 +21,41 @@ export default function AIChatPage() {
   ]);
 
   return (
-    <ChatLayout>
-      <div className="flex h-full">
-        {/* 사이드바 - 세션 목록 */}
-        <ChatSidebar 
-          isOpen={isSidebarOpen}
-          onToggle={() => setSidebarOpen(!isSidebarOpen)}
-        />
-        
-        {/* 메인 채팅 영역 */}
-        <ChatMain 
-          onSettingsClick={() => setShowSettings(true)}
-          className={isSidebarOpen ? 'lg:ml-80' : ''}
-        />
-        
-        {/* 설정 패널 */}
-        <ChatSettings 
-          isOpen={showSettings}
-          onClose={() => setShowSettings(false)}
-        />
-      </div>
-    </ChatLayout>
+    <div className="h-[calc(100vh-theme(spacing.24))]">
+      <ChatLayout>
+        <div className="flex h-full relative">
+          {/* 메인 채팅 영역 */}
+          <div className="flex-1 flex">
+            <ChatMain 
+              onSettingsClick={() => setShowSettings(true)}
+            />
+          </div>
+          
+          {/* 사이드바 - 세션 목록 (오른쪽) */}
+          <ChatSidebar 
+            isOpen={isSidebarOpen}
+            onToggle={() => setSidebarOpen(!isSidebarOpen)}
+          />
+          
+          {/* 토글 버튼 */}
+          {isSidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="absolute right-80 top-6 -translate-x-3 bg-background border border-accent rounded-full p-1 shadow-sm hover:bg-accent-light transition-colors z-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+          
+          {/* 설정 패널 */}
+          <ChatSettings 
+            isOpen={showSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        </div>
+      </ChatLayout>
+    </div>
   );
 }
