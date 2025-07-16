@@ -11,11 +11,13 @@ import { fetchWithOfflineSupport } from '@/lib/utils/offlineQueue'
 const DEFAULT_SETTINGS: TimerSettings = {
   studyDuration: 25 * 60,      // 25분
   shortBreakDuration: 5 * 60,   // 5분
-  longBreakDuration: 15 * 60,   // 15분
-  longBreakInterval: 4,         // 4회마다 긴 휴식
   autoStartBreaks: false,
   autoStartPomodoros: false,
-  notificationsEnabled: true
+  autoStartBreakOnStudyStop: false,
+  autoStartStudyOnBreakStop: false,
+  notificationsEnabled: true,
+  availableStudyDurations: [15 * 60, 20 * 60, 25 * 60, 30 * 60, 45 * 60], // 기본 학습 시간 옵션들
+  availableBreakDurations: [5 * 60, 10 * 60, 15 * 60, 20 * 60] // 기본 휴식 시간 옵션들
 }
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -147,23 +149,33 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
       },
       
       reset: () => {
-        const { workerRef, settings } = get()
+        const { workerRef, settings, sessionType, state } = get()
         
         // 세션 생성 전이므로 아무 처리도 하지 않음
         // 설정시간 전에 종료하면 세션이 기록되지 않음
         
-        set({
-          state: 'idle',
-          timeRemaining: settings.studyDuration,
-          overtimeElapsed: 0,
-          dialAngle: 0,
-          completedRings: 0,
-          currentRingAngle: 0,
-          currentSessionId: null,
-          sessionStartTime: undefined // 시작 시간 초기화
-        })
+        // 학습 세션 중단 시 자동으로 휴식 시작 옵션 확인
+        const shouldAutoStartBreak = sessionType === 'study' && 
+                                    (state === 'countdown' || state === 'paused') && 
+                                    settings.autoStartBreakOnStudyStop
         
-        workerRef?.postMessage({ command: 'reset' })
+        if (shouldAutoStartBreak) {
+          // 휴식 자동 시작
+          get().actions.startBreak()
+        } else {
+          set({
+            state: 'idle',
+            timeRemaining: settings.studyDuration,
+            overtimeElapsed: 0,
+            dialAngle: 0,
+            completedRings: 0,
+            currentRingAngle: 0,
+            currentSessionId: null,
+            sessionStartTime: undefined // 시작 시간 초기화
+          })
+          
+          workerRef?.postMessage({ command: 'reset' })
+        }
       },
       
       stop: async () => {
@@ -220,20 +232,32 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         }
         
         const { settings } = get()
-        const initialDuration = sessionType === 'study' ? settings.studyDuration : settings.shortBreakDuration
-        const initialAngle = (initialDuration / 3600) * 360
         
-        set({
-          state: 'idle',
-          timeRemaining: initialDuration,
-          overtimeElapsed: 0,
-          dialAngle: initialAngle,
-          completedRings: 0,
-          currentRingAngle: initialAngle,
-          currentSessionId: null
-        })
+        // 휴식 세션 중단 시 자동으로 학습 시작 옵션 확인
+        const shouldAutoStartStudy = sessionType === 'break' && 
+                                    state === 'countdown' && 
+                                    settings.autoStartStudyOnBreakStop
         
-        workerRef?.postMessage({ command: 'stop' })
+        if (shouldAutoStartStudy) {
+          // 학습 자동 시작 (기존 subject ID 유지)
+          const currentSubjectId = get().subjectId
+          get().actions.startStudy(currentSubjectId)
+        } else {
+          const initialDuration = sessionType === 'study' ? settings.studyDuration : settings.shortBreakDuration
+          const initialAngle = (initialDuration / 3600) * 360
+          
+          set({
+            state: 'idle',
+            timeRemaining: initialDuration,
+            overtimeElapsed: 0,
+            dialAngle: initialAngle,
+            completedRings: 0,
+            currentRingAngle: initialAngle,
+            currentSessionId: null
+          })
+          
+          workerRef?.postMessage({ command: 'stop' })
+        }
       },
       
       handleWorkerMessage: (message: WorkerMessage) => {

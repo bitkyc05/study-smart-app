@@ -170,13 +170,13 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
                 onChange={(e) => updateSettings({ studyDuration: Number(e.target.value) })}
                 className="px-4 py-2 border border-accent rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-focus"
               >
-                <option value={10}>10s (Test)</option>
-                <option value={900}>15 min</option>
-                <option value={1200}>20 min</option>
-                <option value={1500}>25 min</option>
-                <option value={1800}>30 min</option>
-                <option value={2700}>45 min</option>
-                <option value={3600}>60 min</option>
+                {(settings.availableStudyDurations || []).map(duration => (
+                  <option key={duration} value={duration}>
+                    {duration >= 3600 
+                      ? `${Math.floor(duration / 3600)} hour${Math.floor(duration / 3600) > 1 ? 's' : ''}${duration % 3600 !== 0 ? ` ${Math.floor((duration % 3600) / 60)} min` : ''}`
+                      : `${Math.floor(duration / 60)} min`}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex justify-between items-center">
@@ -186,11 +186,13 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
                 onChange={(e) => updateSettings({ shortBreakDuration: Number(e.target.value) })}
                 className="px-4 py-2 border border-accent rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-focus"
               >
-                <option value={10}>10s (Test)</option>
-                <option value={300}>5 min</option>
-                <option value={600}>10 min</option>
-                <option value={900}>15 min</option>
-                <option value={1200}>20 min</option>
+                {(settings.availableBreakDurations || []).map(duration => (
+                  <option key={duration} value={duration}>
+                    {duration >= 3600 
+                      ? `${Math.floor(duration / 3600)} hour${Math.floor(duration / 3600) > 1 ? 's' : ''}${duration % 3600 !== 0 ? ` ${Math.floor((duration % 3600) / 60)} min` : ''}`
+                      : `${Math.floor(duration / 60)} min`}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

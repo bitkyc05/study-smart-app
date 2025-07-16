@@ -53,13 +53,15 @@ export interface WorkerCommand {
 
 // Timer Settings
 export interface TimerSettings {
-  studyDuration: number          // 기본 학습 시간 (초)
-  shortBreakDuration: number     // 짧은 휴식 시간 (초)
-  longBreakDuration: number      // 긴 휴식 시간 (초)
-  longBreakInterval: number      // 긴 휴식까지의 포모도로 개수
-  autoStartBreaks: boolean       // 휴식 자동 시작
-  autoStartPomodoros: boolean    // 포모도로 자동 시작
-  notificationsEnabled: boolean  // 알림 활성화
+  studyDuration: number                    // 기본 학습 시간 (초)
+  shortBreakDuration: number               // 기본 휴식 시간 (초)
+  autoStartBreaks: boolean                 // 타이머 완료 시 휴식 자동 시작
+  autoStartPomodoros: boolean              // 타이머 완료 시 포모도로 자동 시작
+  autoStartBreakOnStudyStop?: boolean      // 학습 수동 중단 시 휴식 자동 시작
+  autoStartStudyOnBreakStop?: boolean      // 휴식 수동 중단 시 학습 자동 시작
+  notificationsEnabled: boolean            // 알림 활성화
+  availableStudyDurations?: number[]       // 사용 가능한 학습 시간 옵션들 (초)
+  availableBreakDurations?: number[]       // 사용 가능한 휴식 시간 옵션들 (초)
 }
 
 // Notification Settings
