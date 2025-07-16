@@ -5,6 +5,7 @@ import { WeeklyBarChart } from '@/components/charts/WeeklyBarChart'
 import { SubjectPieChart } from '@/components/charts/SubjectPieChart'
 import { TodayRadialChart } from '@/components/charts/TodayRadialChart'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
+import { DdayProgressChart } from '@/components/charts/DdayProgressChart'
 
 export default async function DashboardPage() {
   const stats = await getDashboardStats()
@@ -122,6 +123,10 @@ export default async function DashboardPage() {
             <WeeklyBarChart data={stats.weeklyChartData} />
           </div>
         </Card>
+      </div>
+      
+      <div className="grid md:grid-cols-1 gap-6">
+        <DdayProgressChart />
       </div>
     </div>
   )
