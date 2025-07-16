@@ -4,6 +4,7 @@ import { UserCircleIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useRouter } from 'next/navigation'
+import { useGoalSettingsStore } from '@/store/useGoalSettingsStore'
 
 interface UserMenuProps {
   isOpen: boolean
@@ -61,6 +62,7 @@ export function Header() {
   const [formattedDate, setFormattedDate] = useState('')
   const { user, signOut } = useAuth()
   const router = useRouter()
+  const { settings, loadSettings } = useGoalSettingsStore()
   
   useEffect(() => {
     const today = new Date()
@@ -73,10 +75,32 @@ export function Header() {
     setFormattedDate(dateString)
   }, [])
   
+  useEffect(() => {
+    // Load goal settings when component mounts
+    loadSettings()
+  }, [loadSettings])
+  
   const handleSignOut = async () => {
     await signOut()
     setIsUserMenuOpen(false)
   }
+  
+  // Calculate D-day
+  const calculateDday = () => {
+    if (!settings?.d_day) return null
+    
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dday = new Date(settings.d_day)
+    dday.setHours(0, 0, 0, 0)
+    
+    const diffTime = dday.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    return diffDays
+  }
+  
+  const daysRemaining = calculateDday()
 
   return (
     <header className="bg-white border-b border-accent px-6 py-4">
@@ -88,14 +112,26 @@ export function Header() {
         </div>
         
         <div className="flex items-center space-x-6">
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="px-3 py-1 bg-accent-primary rounded-full">
-                <span className="text-body-md font-medium text-white">D-15</span>
+          {daysRemaining !== null && (
+            <div className="text-center">
+              <div className="flex items-center justify-center space-x-2">
+                <div className={`px-3 py-1 rounded-full ${
+                  daysRemaining <= 7 ? 'bg-red-500' : 
+                  daysRemaining <= 30 ? 'bg-warning' : 
+                  'bg-accent-primary'
+                }`}>
+                  <span className="text-body-md font-medium text-white">
+                    {daysRemaining === 0 ? 'D-DAY' : 
+                     daysRemaining > 0 ? `D-${daysRemaining}` : 
+                     `D+${Math.abs(daysRemaining)}`}
+                  </span>
+                </div>
               </div>
+              <p className="text-caption text-text-secondary mt-1">
+                {settings?.d_day_title || 'D-DAY'}
+              </p>
             </div>
-            <p className="text-caption text-text-secondary mt-1">D-DAY</p>
-          </div>
+          )}
           
           <UserMenu 
             isOpen={isUserMenuOpen} 
