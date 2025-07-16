@@ -1,4 +1,6 @@
 import { getServerClient } from '@/lib/supabase/server';
+import { getUserTimezone } from '@/lib/user-timezone';
+import { getCurrentDateInTimezone } from '@/lib/date-utils';
 import CalendarView from './CalendarView';
 
 export default async function CalendarPage({
@@ -7,12 +9,6 @@ export default async function CalendarPage({
   searchParams: Promise<{ year?: string; month?: string }>;
 }) {
   const params = await searchParams;
-  const now = new Date();
-  const userTimezoneOffset = now.getTimezoneOffset();
-  const currentDate = new Date(now.getTime() - (userTimezoneOffset * 60000));
-  const year = parseInt(params.year || currentDate.getFullYear().toString());
-  const month = parseInt(params.month || (currentDate.getMonth() + 1).toString());
-  
   const supabase = await getServerClient();
   
   // Get the authenticated user
@@ -28,12 +24,19 @@ export default async function CalendarPage({
     );
   }
   
+  // Get user's timezone and current date
+  const userTimezone = await getUserTimezone();
+  const currentDate = getCurrentDateInTimezone(userTimezone);
+  const year = parseInt(params.year || currentDate.getFullYear().toString());
+  const month = parseInt(params.month || (currentDate.getMonth() + 1).toString());
+  
   // Fetch calendar data using the existing RPC function
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: calendarData, error } = await (supabase as any).rpc('get_monthly_calendar_data', {
     year: year,
     month: month,
     p_user_id: user.id,
+    p_timezone: userTimezone
   });
   
   if (error) {

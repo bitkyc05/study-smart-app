@@ -45,24 +45,28 @@ export default async function WeeklyPage({
     (supabase as any).rpc('get_daily_study_summary', {
       start_date: format(weekStartInUserTz, 'yyyy-MM-dd'),
       end_date: format(weekEndInUserTz, 'yyyy-MM-dd'),
-      p_user_id: user.id
+      p_user_id: user.id,
+      p_timezone: userTimezone
     }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any).rpc('get_hourly_study_pattern', {
       start_date: format(weekStartInUserTz, 'yyyy-MM-dd'),
       end_date: format(weekEndInUserTz, 'yyyy-MM-dd'),
-      p_user_id: user.id
+      p_user_id: user.id,
+      p_timezone: userTimezone
     }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any).rpc('get_weekly_comparison', {
       week_start: format(weekStartInUserTz, 'yyyy-MM-dd'),
-      p_user_id: user.id
+      p_user_id: user.id,
+      p_timezone: userTimezone
     }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any).rpc('get_study_insights', {
       start_date: format(weekStartInUserTz, 'yyyy-MM-dd'),
       end_date: format(weekEndInUserTz, 'yyyy-MM-dd'),
-      p_user_id: user.id
+      p_user_id: user.id,
+      p_timezone: userTimezone
     })
   ])
 
