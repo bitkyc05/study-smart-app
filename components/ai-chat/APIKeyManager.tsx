@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAIChatStore } from '@/store/useAIChatStore';
 import { APIKeyService, APIKeyMetadata } from '@/lib/services/api-key-service';
 import { createClient } from '@/lib/supabase/client';
 import { 
@@ -72,15 +71,14 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
   const [validating, setValidating] = useState<string | null>(null);
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
-  const [newKey, setNewKey] = useState('');
+  const [newKeys, setNewKeys] = useState<Record<string, string>>({});
   const [customUrl, setCustomUrl] = useState('');
   const [decryptedHints, setDecryptedHints] = useState<Record<string, string>>({});
   
   const supabase = createClient();
   const keyService = new APIKeyService(supabase);
 
-  useEffect(() => {
-    const loadKeys = async () => {
+  const loadKeys = async () => {
     setLoading(true);
     try {
       const userKeys = await keyService.getUserKeys(userId);
@@ -89,15 +87,13 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
       for (const key of userKeys) {
         keyMap[key.provider] = key;
         
-        // Decrypt hint
-        if (key.encrypted_hint) {
-          const hint = await keyService.decryptHint(userId, key.encrypted_hint);
-          if (hint) {
-            setDecryptedHints(prev => ({
-              ...prev,
-              [key.provider]: hint
-            }));
-          }
+        // Get hint
+        const hint = await keyService.getHint(userId, key.provider);
+        if (hint) {
+          setDecryptedHints(prev => ({
+            ...prev,
+            [key.provider]: hint
+          }));
         }
       }
       setKeys(keyMap);
@@ -108,13 +104,14 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
       setLoading(false);
     }
   };
-  
+
+  useEffect(() => {
     loadKeys();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const handleSaveKey = async (provider: string) => {
-    if (!newKey.trim()) {
+    if (!(newKeys[provider] || '').trim()) {
       toast.error('Please enter an API key');
       return;
     }
@@ -124,14 +121,14 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
       const result = await keyService.storeKey(
         userId,
         provider,
-        newKey,
+        newKeys[provider] || '',
         provider === 'custom' ? customUrl : undefined
       );
 
       if (result.success) {
         toast.success('API key saved successfully');
         setEditingProvider(null);
-        setNewKey('');
+        setNewKeys(prev => ({ ...prev, [provider]: '' }));
         setCustomUrl('');
         await loadKeys();
       } else {
@@ -302,7 +299,7 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
               <button
                 onClick={() => {
                   setEditingProvider(provider.id);
-                  setNewKey('');
+                  setNewKeys(prev => ({ ...prev, [provider.id]: '' }));
                   if (provider.id === 'custom' && keyData.custom_url) {
                     setCustomUrl(keyData.custom_url);
                   }
@@ -325,8 +322,11 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
             <div className="space-y-3">
               <input
                 type="password"
-                value={newKey}
-                onChange={(e) => setNewKey(e.target.value)}
+                value={newKeys[provider.id] || ''}
+                onChange={(e) => setNewKeys(prev => ({
+                  ...prev,
+                  [provider.id]: e.target.value
+                }))}
                 placeholder={`Enter ${provider.name} API key`}
                 className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 autoFocus
@@ -345,7 +345,7 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSaveKey(provider.id)}
-                  disabled={isValidatingThis || !newKey.trim() || (provider.requiresUrl && !customUrl.trim())}
+                  disabled={isValidatingThis || !(newKeys[provider.id] || '').trim() || (provider.requiresUrl && !customUrl.trim())}
                   className="flex-1 px-3 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                 >
                   {isValidatingThis ? (
@@ -357,7 +357,7 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
                 <button
                   onClick={() => {
                     setEditingProvider(null);
-                    setNewKey('');
+                    setNewKeys(prev => ({ ...prev, [provider.id]: '' }));
                     setCustomUrl('');
                   }}
                   className="px-3 py-2 bg-muted hover:bg-muted/80 rounded-md transition-colors text-sm font-medium"

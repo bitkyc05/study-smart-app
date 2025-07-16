@@ -9,10 +9,17 @@ export function useHotkeys(hotkeys: Hotkey[]) {
     
     // Parse hotkeys and create handlers map
     hotkeys.forEach(([key, handler]) => {
-      handlers.set(key.toLowerCase(), handler);
+      if (key && typeof key === 'string') {
+        handlers.set(key.toLowerCase(), handler);
+      }
     });
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Ensure event.key exists
+      if (!event.key || typeof event.key !== 'string') {
+        return;
+      }
+      
       // Build key combination string
       let keyCombo = '';
       

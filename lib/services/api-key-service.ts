@@ -49,8 +49,8 @@ export class APIKeyService {
         };
       }
 
-      // Store in vault using RPC function
-      const { data, error } = await this.supabase.rpc('store_api_key', {
+      // Store using simplified RPC function
+      const { data, error } = await this.supabase.rpc('store_api_key_simple', {
         p_user_id: userId,
         p_provider: provider,
         p_api_key: apiKey,
@@ -86,7 +86,7 @@ export class APIKeyService {
     provider: string
   ): Promise<string | null> {
     try {
-      const { data, error } = await this.supabase.rpc('get_decrypted_api_key', {
+      const { data, error } = await this.supabase.rpc('get_api_key_simple', {
         p_user_id: userId,
         p_provider: provider
       });
@@ -415,16 +415,16 @@ export class APIKeyService {
   }
 
   /**
-   * Decrypt key hint for display
+   * Get key hint for display
    */
-  async decryptHint(
+  async getHint(
     userId: string,
-    encryptedHint: string
+    provider: string
   ): Promise<string | null> {
     try {
-      const { data, error } = await this.supabase.rpc('decrypt_key_hint', {
+      const { data, error } = await this.supabase.rpc('get_key_hint_simple', {
         p_user_id: userId,
-        p_encrypted_hint: encryptedHint
+        p_provider: provider
       });
 
       if (error) {
