@@ -70,7 +70,7 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
           opacity={0.3}
         />
         
-        {/* 완성된 원들 (60분 초과 시) */}
+        {/* 완성된 원들 (60분 초과 시) - 옅은 색으로 표시 */}
         {completedRings > 0 && Array.from({ length: completedRings }).map((_, i) => (
           <circle
             key={`ring-${i}`}
@@ -80,7 +80,7 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
             fill="none"
             stroke={getColor()}
             strokeWidth={strokeWidth}
-            opacity={0.3 + (i * 0.1)} // 점진적 투명도
+            opacity={0.15 - (i * 0.02)} // 더 옅은 투명도, 겹칠수록 더 옅게
             className="transition-opacity duration-300"
           />
         ))}
@@ -103,12 +103,12 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
         {completedRings > 0 && (
           <text
             x={size / 2}
-            y={20}
+            y={strokeWidth + 25}
             textAnchor="middle"
-            className="text-sm fill-current text-text-secondary"
+            className="text-sm fill-current text-text-secondary font-medium"
             style={{ transform: 'rotate(90deg)', transformOrigin: `${size / 2}px ${size / 2}px` }}
           >
-            {completedRings} loops
+            {completedRings}시간 초과
           </text>
         )}
       </svg>
@@ -126,6 +126,11 @@ export function CircularTimer({ size = 320, strokeWidth = 12 }: CircularTimerPro
             {state === 'countdown' && sessionType === 'break' && 'Break Time'}
             {state === 'paused' && 'Paused'}
           </div>
+          {completedRings > 0 && (
+            <div className="text-xs text-text-secondary opacity-70 mt-1">
+              {completedRings}시간 이상 집중중
+            </div>
+          )}
         </div>
       </div>
     </div>

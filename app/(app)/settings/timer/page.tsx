@@ -38,13 +38,38 @@ export default function TimerSettingsPage() {
   const [customBreakTime, setCustomBreakTime] = useState('')
 
   useEffect(() => {
-    setLocalSettings(settings)
-    // Initialize with default selected options
-    const defaultStudy = [15 * 60, 20 * 60, 25 * 60, 30 * 60, 45 * 60]
-    const defaultBreak = [5 * 60, 10 * 60, 15 * 60, 20 * 60]
-    setSelectedStudyOptions(defaultStudy)
-    setSelectedBreakOptions(defaultBreak)
-  }, [settings])
+    // Load settings from API on component mount - only once
+    const loadSettings = async () => {
+      try {
+        const response = await fetch('/api/settings/timer')
+        if (response.ok) {
+          const apiSettings = await response.json()
+          setLocalSettings(apiSettings)
+          actions.updateSettings(apiSettings)
+          setSelectedStudyOptions(apiSettings.availableStudyDurations || [15 * 60, 20 * 60, 25 * 60, 30 * 60, 45 * 60])
+          setSelectedBreakOptions(apiSettings.availableBreakDurations || [5 * 60, 10 * 60, 15 * 60, 20 * 60])
+        } else {
+          // Fallback to default settings
+          setLocalSettings(settings)
+          const savedStudyOptions = settings.availableStudyDurations || [15 * 60, 20 * 60, 25 * 60, 30 * 60, 45 * 60]
+          const savedBreakOptions = settings.availableBreakDurations || [5 * 60, 10 * 60, 15 * 60, 20 * 60]
+          setSelectedStudyOptions(savedStudyOptions)
+          setSelectedBreakOptions(savedBreakOptions)
+        }
+      } catch (error) {
+        console.error('Error loading timer settings:', error)
+        // Fallback to default settings
+        setLocalSettings(settings)
+        const savedStudyOptions = settings.availableStudyDurations || [15 * 60, 20 * 60, 25 * 60, 30 * 60, 45 * 60]
+        const savedBreakOptions = settings.availableBreakDurations || [5 * 60, 10 * 60, 15 * 60, 20 * 60]
+        setSelectedStudyOptions(savedStudyOptions)
+        setSelectedBreakOptions(savedBreakOptions)
+      }
+    }
+
+    loadSettings()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 빈 의존성 배열로 컴포넌트 마운트 시에만 실행
 
   const updateSetting = (key: string, value: number | boolean) => {
     setLocalSettings(prev => ({ ...prev, [key]: value }))
@@ -105,26 +130,44 @@ export default function TimerSettingsPage() {
     }
   }
 
-  const handleSave = () => {
-    // Save the selected options and settings
-    const updatedSettings = {
-      ...localSettings,
-      availableStudyDurations: selectedStudyOptions,
-      availableBreakDurations: selectedBreakOptions
+  const handleSave = async () => {
+    try {
+      // Save the selected options and settings
+      const updatedSettings = {
+        ...localSettings,
+        availableStudyDurations: selectedStudyOptions,
+        availableBreakDurations: selectedBreakOptions
+      }
+      
+      // Save to Supabase
+      const response = await fetch('/api/settings/timer', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedSettings)
+      })
+
+      if (response.ok) {
+        // Update local store
+        actions.updateSettings(updatedSettings)
+        setHasUnsavedChanges(false)
+        
+        // Show success message
+        alert('Timer settings saved successfully!')
+      } else {
+        throw new Error('Failed to save settings')
+      }
+    } catch (error) {
+      console.error('Error saving timer settings:', error)
+      alert('Failed to save timer settings. Please try again.')
     }
-    actions.updateSettings(updatedSettings)
-    setHasUnsavedChanges(false)
-    
-    // Show success message
-    alert('Timer settings saved successfully!')
   }
 
   const handleReset = () => {
     setLocalSettings(settings)
-    const defaultStudy = [15 * 60, 20 * 60, 25 * 60, 30 * 60, 45 * 60]
-    const defaultBreak = [5 * 60, 10 * 60, 15 * 60, 20 * 60]
-    setSelectedStudyOptions(defaultStudy)
-    setSelectedBreakOptions(defaultBreak)
+    const savedStudyOptions = settings.availableStudyDurations || [15 * 60, 20 * 60, 25 * 60, 30 * 60, 45 * 60]
+    const savedBreakOptions = settings.availableBreakDurations || [5 * 60, 10 * 60, 15 * 60, 20 * 60]
+    setSelectedStudyOptions(savedStudyOptions)
+    setSelectedBreakOptions(savedBreakOptions)
     setCustomStudyTime('')
     setCustomBreakTime('')
     setHasUnsavedChanges(false)

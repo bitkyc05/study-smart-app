@@ -356,7 +356,18 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         const { state, timeRemaining, settingDuration, overtimeElapsed } = get()
         const baseUnit = 60 * 60 // 60분 기준
         
-        if (state === 'countdown' || state === 'paused') {
+        if (state === 'idle') {
+          // idle 상태에서도 시간이 60분 이상일 때 완성된 원 표시
+          const completedRings = Math.floor(settingDuration / baseUnit)
+          const remainingSeconds = settingDuration % baseUnit
+          const angle = (remainingSeconds / baseUnit) * 360
+          
+          set({ 
+            dialAngle: angle,
+            completedRings: completedRings,
+            currentRingAngle: angle
+          })
+        } else if (state === 'countdown' || state === 'paused') {
           // 카운트다운: 설정시간 각도 → 0° (비우기 - 반시계방향)
           // 60분 원 기준으로 남은 시간의 각도 계산
           const angle = (timeRemaining / baseUnit) * 360
@@ -450,14 +461,13 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
             ? newSettingsObj.studyDuration
             : newSettingsObj.shortBreakDuration
           
-          const angle = (duration / 3600) * 360 // 60분 기준 각도
-          
           set({ 
             settingDuration: duration,
-            timeRemaining: duration,
-            dialAngle: angle,
-            currentRingAngle: angle
+            timeRemaining: duration
           })
+          
+          // updateDialAngle 호출하여 올바른 원과 각도 계산
+          get().actions.updateDialAngle()
         }
       },
 

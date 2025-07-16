@@ -28,7 +28,25 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
   useEffect(() => {
     initializeWorker()
     recoverSession()
-  }, [initializeWorker, recoverSession])
+    
+    // API에서 타이머 설정 로드
+    const loadTimerSettings = async () => {
+      try {
+        const response = await fetch('/api/settings/timer')
+        if (response.ok) {
+          const apiSettings = await response.json()
+          updateSettings(apiSettings)
+        }
+      } catch (error) {
+        console.error('Error loading timer settings:', error)
+      }
+    }
+    
+    loadTimerSettings()
+    
+    // 초기 다이얼 각도 업데이트 (1시간 이상 설정 시 원 표시)
+    usePomodoroStore.getState().actions.updateDialAngle()
+  }, [initializeWorker, recoverSession, updateSettings])
   
   // 알림 권한 요청
   useEffect(() => {
@@ -170,7 +188,10 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
                 onChange={(e) => updateSettings({ studyDuration: Number(e.target.value) })}
                 className="px-4 py-2 border border-accent rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-focus"
               >
-                {(settings.availableStudyDurations || []).map(duration => (
+                {(settings.availableStudyDurations && settings.availableStudyDurations.length > 0 
+                  ? settings.availableStudyDurations 
+                  : [15 * 60, 20 * 60, 25 * 60, 30 * 60, 45 * 60, 60 * 60, 90 * 60, 120 * 60]
+                ).map(duration => (
                   <option key={duration} value={duration}>
                     {duration >= 3600 
                       ? `${Math.floor(duration / 3600)} hour${Math.floor(duration / 3600) > 1 ? 's' : ''}${duration % 3600 !== 0 ? ` ${Math.floor((duration % 3600) / 60)} min` : ''}`
@@ -186,7 +207,10 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
                 onChange={(e) => updateSettings({ shortBreakDuration: Number(e.target.value) })}
                 className="px-4 py-2 border border-accent rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-focus"
               >
-                {(settings.availableBreakDurations || []).map(duration => (
+                {(settings.availableBreakDurations && settings.availableBreakDurations.length > 0 
+                  ? settings.availableBreakDurations 
+                  : [5 * 60, 10 * 60, 15 * 60, 20 * 60, 30 * 60]
+                ).map(duration => (
                   <option key={duration} value={duration}>
                     {duration >= 3600 
                       ? `${Math.floor(duration / 3600)} hour${Math.floor(duration / 3600) > 1 ? 's' : ''}${duration % 3600 !== 0 ? ` ${Math.floor((duration % 3600) / 60)} min` : ''}`
