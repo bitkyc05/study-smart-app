@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { BaseAIAdapter } from '../base-adapter';
 import {
   AICompletionOptions,
   AICompletionResponse,
   AIStreamChunk,
-  AIProviderError,
   MODEL_CONTEXT_LIMITS
 } from '@/types/ai-provider';
 
@@ -352,7 +353,10 @@ export class OpenAIAdapter extends BaseAIAdapter {
         delta: {
           role: choice.delta.role as 'user' | 'assistant' | 'system' | undefined,
           content: choice.delta.content,
-          functionCall: choice.delta.function_call
+          functionCall: choice.delta.function_call ? {
+            name: choice.delta.function_call.name || '',
+            arguments: choice.delta.function_call.arguments || ''
+          } : undefined
         },
         index: choice.index,
         finishReason: choice.finish_reason || undefined

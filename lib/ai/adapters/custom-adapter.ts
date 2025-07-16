@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { BaseAIAdapter } from '../base-adapter';
 import {
   AICompletionOptions,
@@ -67,12 +69,13 @@ export class CustomAdapter extends BaseAIAdapter {
         };
       } else {
         // 커스텀 형식 - 기본 구조
+        const { messages, model, temperature, maxTokens, ...restOptions } = options;
         requestBody = {
-          prompt: this.messagesToPrompt(options.messages),
-          model: options.model || this.customConfig.defaultModel,
-          temperature: options.temperature,
-          max_tokens: options.maxTokens,
-          ...options
+          prompt: this.messagesToPrompt(messages),
+          model: model || this.customConfig.defaultModel,
+          temperature,
+          max_tokens: maxTokens,
+          ...restOptions
         };
       }
       
@@ -130,11 +133,9 @@ export class CustomAdapter extends BaseAIAdapter {
     } else {
       requestBody = {
         prompt: this.messagesToPrompt(options.messages),
-        model: options.model || this.customConfig.defaultModel,
-        temperature: options.temperature,
-        max_tokens: options.maxTokens,
         stream: true,
-        ...options
+        ...options,
+        model: options.model || this.customConfig.defaultModel
       };
     }
     

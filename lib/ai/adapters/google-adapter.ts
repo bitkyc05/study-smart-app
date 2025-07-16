@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseAIAdapter } from '../base-adapter';
 import {
   AICompletionOptions,
@@ -278,7 +279,13 @@ export class GoogleAdapter extends BaseAIAdapter {
     // 연속된 같은 역할 병합
     const mergedContents: GeminiContent[] = [];
     let lastRole: string | null = null;
-    let partBuffer: Array<{ text: string }> = [];
+    let partBuffer: Array<{
+      text?: string;
+      inlineData?: {
+        mimeType: string;
+        data: string;
+      };
+    }> = [];
     
     for (const content of contents) {
       if (content.role === lastRole) {

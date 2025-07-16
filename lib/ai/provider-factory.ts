@@ -4,7 +4,7 @@ import { AnthropicAdapter } from './adapters/anthropic-adapter';
 import { GoogleAdapter } from './adapters/google-adapter';
 import { GrokAdapter } from './adapters/grok-adapter';
 import { CustomAdapter } from './adapters/custom-adapter';
-import { createClient } from '@/lib/supabase/server';
+import { getServerClient } from '@/lib/supabase/server';
 
 // Provider 인스턴스 캐시
 interface CachedProvider {
@@ -69,7 +69,7 @@ export class AIProviderFactory {
     userId: string,
     providerType: ProviderType
   ): Promise<AIProvider> {
-    const supabase = await createClient();
+    const supabase = await getServerClient();
     
     // user_api_keys 테이블에서 API 키 정보 조회
     const { data: keyData, error } = await supabase
@@ -85,7 +85,7 @@ export class AIProviderFactory {
     }
     
     // API 키 복호화 (별도 함수로 구현 필요)
-    const apiKey = await this.getDecryptedApiKey(keyData.id, userId);
+    const apiKey = await this.getDecryptedApiKey(userId, providerType);
     
     const config: AIProviderConfig = {
       apiKey,
@@ -141,14 +141,14 @@ export class AIProviderFactory {
   /**
    * 암호화된 API 키 복호화
    */
-  private static async getDecryptedApiKey(keyId: string, userId: string): Promise<string> {
-    const supabase = await createClient();
+  private static async getDecryptedApiKey(userId: string, provider: ProviderType): Promise<string> {
+    const supabase = await getServerClient();
     
     // Supabase의 Vault나 pgsodium을 사용하여 복호화
     // 실제 구현은 프로젝트의 암호화 방식에 따라 다름
     const { data, error } = await supabase.rpc('decrypt_api_key', {
-      p_key_id: keyId,
-      p_user_id: userId
+      p_user_id: userId,
+      p_provider: provider
     });
     
     if (error || !data) {

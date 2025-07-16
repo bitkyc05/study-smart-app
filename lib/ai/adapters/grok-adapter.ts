@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseAIAdapter } from '../base-adapter';
 import {
   AICompletionOptions,
   AICompletionResponse,
   AIStreamChunk,
+  AIMessage,
   MODEL_CONTEXT_LIMITS
 } from '@/types/ai-provider';
 
