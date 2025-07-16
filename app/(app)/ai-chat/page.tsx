@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAIChatStore } from '@/store/useAIChatStore';
 import ChatLayout from '@/components/ai-chat/ChatLayout';
 import ChatSidebar from '@/components/ai-chat/ChatSidebar';

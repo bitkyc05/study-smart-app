@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useAIChatStore } from '@/store/useAIChatStore';
 import MessageItem from './MessageItem';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,9 @@ export default function ChatMessages({ className }: ChatMessagesProps) {
   const [autoScroll, setAutoScroll] = useState(true);
   
   const { activeSessionId, getSessionMessages, streamingMessageId } = useAIChatStore();
-  const messages = activeSessionId ? getSessionMessages(activeSessionId) : [];
+  const messages = useMemo(() => {
+    return activeSessionId ? getSessionMessages(activeSessionId) : [];
+  }, [activeSessionId, getSessionMessages]);
 
   // 가상 스크롤링 (성능 최적화)
   const virtualizer = useVirtualizer({

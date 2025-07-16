@@ -6,13 +6,10 @@ import {
   MessageSquare, 
   Trash2, 
   Edit2,
-  ChevronLeft,
-  Clock,
   Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
-import { ko } from 'date-fns/locale';
+// Date formatting utilities will be added when needed
 
 interface ChatSidebarProps {
   isOpen: boolean;

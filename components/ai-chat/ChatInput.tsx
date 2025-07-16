@@ -3,7 +3,7 @@ import { useAIChatStore } from '@/store/useAIChatStore';
 import { Send, Paperclip, Mic, Square, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHotkeys } from '@/hooks/useHotkeys';
-import type { ProcessedFile } from '@/types/ai-chat.types';
+import type { ProcessedFile, SpeechRecognitionEvent } from '@/types/ai-chat.types';
 
 interface ChatInputProps {
   className?: string;
@@ -71,10 +71,7 @@ export default function ChatInput({ className }: ChatInputProps) {
     }
   };
 
-  const handleFileSelect = (files: ProcessedFile[]) => {
-    setAttachedFiles([...attachedFiles, ...files]);
-    setShowFileUpload(false);
-  };
+  // File handling functions will be implemented when FileUpload component is ready
 
   const removeFile = (index: number) => {
     setAttachedFiles(files => files.filter((_, i) => i !== index));
@@ -95,14 +92,14 @@ export default function ChatInput({ className }: ChatInputProps) {
       return;
     }
 
-    const recognition = new (window as any).webkitSpeechRecognition();
+    const recognition = new window.webkitSpeechRecognition();
     recognition.lang = 'ko-KR';
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = Array.from(event.results)
-        .map((result: any) => result[0].transcript)
+        .map((result) => result[0].transcript)
         .join('');
       
       setMessage(transcript);
@@ -112,14 +109,14 @@ export default function ChatInput({ className }: ChatInputProps) {
     setIsRecording(true);
     
     // 저장해서 나중에 중지
-    (window as any).currentRecognition = recognition;
+    window.currentRecognition = recognition;
   };
 
   const stopRecording = () => {
-    const recognition = (window as any).currentRecognition;
+    const recognition = window.currentRecognition;
     if (recognition) {
       recognition.stop();
-      delete (window as any).currentRecognition;
+      delete window.currentRecognition;
     }
     setIsRecording(false);
   };

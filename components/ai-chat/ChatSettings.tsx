@@ -24,6 +24,10 @@ const PROVIDER_OPTIONS = {
   grok: {
     name: 'Grok',
     models: ['grok-1']
+  },
+  custom: {
+    name: 'Custom',
+    models: ['custom-model']
   }
 };
 
@@ -33,7 +37,7 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
 
   const currentSettings = providerSettings[selectedProvider];
 
-  const handleSettingChange = (key: string, value: any) => {
+  const handleSettingChange = (key: string, value: string | number) => {
     setProviderSettings(selectedProvider, {
       ...currentSettings,
       [key]: value
