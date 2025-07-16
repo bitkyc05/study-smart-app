@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 
 interface APIKeyManagerProps {
   userId: string;
+  onKeyUpdate?: () => void;
 }
 
 const PROVIDERS = [
@@ -65,7 +66,7 @@ const PROVIDERS = [
   }
 ];
 
-export default function APIKeyManager({ userId }: APIKeyManagerProps) {
+export default function APIKeyManager({ userId, onKeyUpdate }: APIKeyManagerProps) {
   const [keys, setKeys] = useState<Record<string, APIKeyMetadata>>({});
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState<string | null>(null);
@@ -131,6 +132,10 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
         setNewKeys(prev => ({ ...prev, [provider]: '' }));
         setCustomUrl('');
         await loadKeys();
+        // Notify parent component to refresh models
+        if (onKeyUpdate) {
+          onKeyUpdate();
+        }
       } else {
         toast.error(result.error || 'Failed to save API key');
       }
@@ -150,6 +155,10 @@ export default function APIKeyManager({ userId }: APIKeyManagerProps) {
       if (success) {
         toast.success('API key deleted successfully');
         await loadKeys();
+        // Notify parent component to refresh models
+        if (onKeyUpdate) {
+          onKeyUpdate();
+        }
       } else {
         toast.error('Failed to delete API key');
       }

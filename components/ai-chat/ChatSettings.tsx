@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useAIChatStore } from '@/store/useAIChatStore';
-import { X, ChevronDown, Settings, Key } from 'lucide-react';
+import { X, ChevronDown, Settings, Key, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import APIKeyManager from './APIKeyManager';
+import { APIKeyService } from '@/lib/services/api-key-service';
 
 interface ChatSettingsProps {
   isOpen: boolean;
   onClose: () => void;
+  refreshTrigger?: number; // Add trigger for refreshing models
 }
 
 type TabType = 'settings' | 'api-keys';
@@ -15,34 +17,45 @@ type TabType = 'settings' | 'api-keys';
 const PROVIDER_OPTIONS = {
   openai: {
     name: 'OpenAI',
-    models: ['gpt-4-turbo-preview', 'gpt-4', 'gpt-3.5-turbo']
+    defaultModels: ['gpt-4-turbo-preview', 'gpt-4', 'gpt-3.5-turbo']
   },
   anthropic: {
     name: 'Anthropic',
-    models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307']
+    defaultModels: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307']
   },
   google: {
     name: 'Google',
-    models: ['gemini-pro', 'gemini-pro-vision']
+    defaultModels: ['gemini-pro', 'gemini-pro-vision']
   },
   grok: {
     name: 'Grok',
-    models: ['grok-1']
+    defaultModels: ['grok-1']
   },
   custom: {
     name: 'Custom',
-    models: ['custom-model']
+    defaultModels: []
   }
 };
 
-export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
+export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: ChatSettingsProps) {
   const { providerSettings, setProviderSettings } = useAIChatStore();
   const [selectedProvider, setSelectedProvider] = useState<keyof typeof PROVIDER_OPTIONS>('openai');
   const [activeTab, setActiveTab] = useState<TabType>('settings');
   const [userId, setUserId] = useState<string | null>(null);
+  const [models, setModels] = useState<Record<string, string[]>>({});
+  const [loadingModels, setLoadingModels] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState<Record<string, boolean>>({});
+  const [customModel, setCustomModel] = useState('');
+  const [keyUpdateCounter, setKeyUpdateCounter] = useState(0);
 
-  const currentSettings = providerSettings[selectedProvider];
+  const currentSettings = providerSettings[selectedProvider] || {
+    model: '',
+    temperature: 0.7,
+    maxTokens: 4096,
+    customUrl: ''
+  };
   const supabase = createClient();
+  const keyService = new APIKeyService(supabase);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -52,6 +65,87 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
     fetchUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Check for API keys and fetch models
+  useEffect(() => {
+    if (!userId) return;
+
+    const checkApiKeysAndFetchModels = async () => {
+      const providers = Object.keys(PROVIDER_OPTIONS) as (keyof typeof PROVIDER_OPTIONS)[];
+      
+      for (const provider of providers) {
+        // Check if user has API key
+        const keys = await keyService.getUserKeys(userId);
+        const hasKey = keys.some(k => k.provider === provider && k.is_active);
+        setHasApiKey(prev => ({ ...prev, [provider]: hasKey }));
+
+        // Fetch models if has key and not custom provider
+        if (hasKey && provider !== 'custom') {
+          await fetchModelsForProvider(provider);
+        }
+      }
+    };
+
+    checkApiKeysAndFetchModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, refreshTrigger, keyUpdateCounter]); // Add refreshTrigger and keyUpdateCounter to dependencies
+
+  const fetchModelsForProvider = async (provider: string) => {
+    if (!userId) return;
+    
+    setLoadingModels(provider);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-models', {
+        body: { provider }
+      });
+
+      if (!error && data?.models && data.models.length > 0) {
+        setModels(prev => ({ ...prev, [provider]: data.models }));
+        
+        // If current model is empty or not in the list, set first model as default
+        const currentModel = providerSettings[provider as keyof typeof PROVIDER_OPTIONS]?.model;
+        if (!currentModel || !data.models.includes(currentModel)) {
+          handleSettingChange('model', data.models[0]);
+        }
+      } else {
+        // Use default models if fetch fails
+        const defaultModels = PROVIDER_OPTIONS[provider as keyof typeof PROVIDER_OPTIONS].defaultModels;
+        setModels(prev => ({ 
+          ...prev, 
+          [provider]: defaultModels 
+        }));
+        
+        // Set first default model if current is empty
+        const currentModel = providerSettings[provider as keyof typeof PROVIDER_OPTIONS]?.model;
+        if (!currentModel && defaultModels.length > 0) {
+          handleSettingChange('model', defaultModels[0]);
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to fetch models for ${provider}:`, error);
+      // Use default models on error
+      const defaultModels = PROVIDER_OPTIONS[provider as keyof typeof PROVIDER_OPTIONS].defaultModels;
+      setModels(prev => ({ 
+        ...prev, 
+        [provider]: defaultModels 
+      }));
+      
+      // Set first default model if current is empty
+      const currentModel = providerSettings[provider as keyof typeof PROVIDER_OPTIONS]?.model;
+      if (!currentModel && defaultModels.length > 0) {
+        handleSettingChange('model', defaultModels[0]);
+      }
+    } finally {
+      setLoadingModels(null);
+    }
+  };
+
+  // Update custom model when provider changes
+  useEffect(() => {
+    if (selectedProvider === 'custom' && currentSettings.model) {
+      setCustomModel(currentSettings.model);
+    }
+  }, [selectedProvider, currentSettings.model]);
 
   const handleSettingChange = (key: string, value: string | number) => {
     setProviderSettings(selectedProvider, {
@@ -140,18 +234,57 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
           {/* 모델 선택 */}
           <div>
             <label className="block text-sm font-medium mb-2">모델</label>
-            <div className="relative">
-              <select
-                value={currentSettings.model}
-                onChange={(e) => handleSettingChange('model', e.target.value)}
-                className="w-full px-3 py-2 pr-8 bg-muted rounded-lg appearance-none outline-none focus:ring-2 focus:ring-primary"
-              >
-                {PROVIDER_OPTIONS[selectedProvider].models.map(model => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
-            </div>
+            {selectedProvider === 'custom' ? (
+              <input
+                type="text"
+                value={customModel}
+                onChange={(e) => {
+                  setCustomModel(e.target.value);
+                  handleSettingChange('model', e.target.value);
+                }}
+                placeholder="모델명을 입력하세요 (예: llama-2-70b)"
+                className="w-full px-3 py-2 bg-muted rounded-lg outline-none focus:ring-2 focus:ring-primary"
+              />
+            ) : (
+              <div className="relative">
+                <select
+                  value={currentSettings.model}
+                  onChange={(e) => handleSettingChange('model', e.target.value)}
+                  disabled={!hasApiKey[selectedProvider] || loadingModels === selectedProvider}
+                  className="w-full px-3 py-2 pr-8 bg-muted rounded-lg appearance-none outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {!hasApiKey[selectedProvider] ? (
+                    <option value="">API key unavailable</option>
+                  ) : loadingModels === selectedProvider ? (
+                    <option value="">모델 목록 불러오는 중...</option>
+                  ) : (
+                    <>
+                      {/* Always show current model even if not in list */}
+                      {currentSettings.model && !models[selectedProvider]?.includes(currentSettings.model) && !PROVIDER_OPTIONS[selectedProvider].defaultModels.includes(currentSettings.model) && (
+                        <option key={currentSettings.model} value={currentSettings.model}>
+                          {currentSettings.model} (current)
+                        </option>
+                      )}
+                      {/* Show fetched models or default models */}
+                      {models[selectedProvider]?.length > 0 ? (
+                        models[selectedProvider].map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))
+                      ) : (
+                        PROVIDER_OPTIONS[selectedProvider].defaultModels.map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))
+                      )}
+                    </>
+                  )}
+                </select>
+                {loadingModels === selectedProvider ? (
+                  <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" />
+                ) : (
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                )}
+              </div>
+            )}
           </div>
 
           {/* 온도 설정 */}
@@ -221,7 +354,10 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
             /* API 키 관리 탭 */
             <div className="p-4">
               {userId ? (
-                <APIKeyManager userId={userId} />
+                <APIKeyManager 
+                  userId={userId} 
+                  onKeyUpdate={() => setKeyUpdateCounter(prev => prev + 1)}
+                />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   로그인이 필요합니다

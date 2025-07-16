@@ -76,6 +76,12 @@ export const useAIChatStore = create<AIChatState>()(
           temperature: 0.7,
           maxTokens: 4096,
         },
+        custom: {
+          model: '',
+          temperature: 0.7,
+          maxTokens: 4096,
+          customUrl: '',
+        },
       },
       isSidebarOpen: true,
       isLoading: false,

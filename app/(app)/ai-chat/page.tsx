@@ -41,7 +41,7 @@ export default function AIChatPage() {
           {isSidebarOpen && (
             <button
               onClick={() => setSidebarOpen(false)}
-              className="absolute right-80 top-6 -translate-x-3 bg-background border border-accent rounded-full p-1 shadow-sm hover:bg-accent-light transition-colors z-50"
+              className="absolute right-80 top-20 -translate-x-3 bg-background border border-accent rounded-full p-1 shadow-sm hover:bg-accent-light transition-colors z-50"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
