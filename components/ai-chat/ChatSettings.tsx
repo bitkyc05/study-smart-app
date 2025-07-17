@@ -9,7 +9,6 @@ import { APIKeyService } from '@/lib/services/api-key-service';
 interface ChatSettingsProps {
   isOpen: boolean;
   onClose: () => void;
-  refreshTrigger?: number; // Add trigger for refreshing models
 }
 
 type TabType = 'settings' | 'api-keys';
@@ -47,7 +46,7 @@ const PROVIDER_OPTIONS = {
   }
 };
 
-export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: ChatSettingsProps) {
+export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
   const { providerSettings, setProviderSettings, activeSessionId, sessions, updateSession } = useAIChatStore();
   const activeSession = sessions.find(s => s.id === activeSessionId);
   const [selectedProvider, setSelectedProvider] = useState<keyof typeof PROVIDER_OPTIONS>(

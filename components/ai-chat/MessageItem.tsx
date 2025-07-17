@@ -1,7 +1,7 @@
 import { memo, useState, useEffect } from 'react';
 import { ChatMessage } from '@/types/ai-chat.types';
 import { cn } from '@/lib/utils';
-import { User, Bot, Copy, Check, RefreshCw, Paperclip, FileText, Image, Code, Database } from 'lucide-react';
+import { User, Bot, Copy, Check, RefreshCw, FileText, Image, Code, Database } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -35,12 +35,13 @@ const MessageItem = memo(function MessageItem({
 
   // 파일 정보 가져오기
   useEffect(() => {
-    if (message.metadata?.fileContexts && message.metadata.fileContexts.length > 0) {
+    const fileContexts = message.metadata?.fileContexts;
+    if (fileContexts && fileContexts.length > 0) {
       const fetchFiles = async () => {
         const { data } = await supabase
           .from('file_contexts')
           .select('id, file_name, file_type, file_size')
-          .in('id', message.metadata.fileContexts);
+          .in('id', fileContexts);
         
         if (data) {
           setAttachedFiles(data);
