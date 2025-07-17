@@ -1,7 +1,7 @@
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { ChatMessage } from '@/types/ai-chat.types';
 import { cn } from '@/lib/utils';
-import { User, Bot, Copy, Check, RefreshCw } from 'lucide-react';
+import { User, Bot, Copy, Check, RefreshCw, Paperclip, FileText, Image, Code, Database } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -9,22 +9,58 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { createClient } from '@/lib/supabase/client';
 
 interface MessageItemProps {
   message: ChatMessage;
   isStreaming?: boolean;
+  onRegenerate?: () => void;
+}
+
+interface FileInfo {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
 }
 
 const MessageItem = memo(function MessageItem({ 
   message, 
-  isStreaming 
+  isStreaming,
+  onRegenerate 
 }: MessageItemProps) {
   const [copied, setCopied] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<FileInfo[]>([]);
+  const supabase = createClient();
+
+  // 파일 정보 가져오기
+  useEffect(() => {
+    if (message.metadata?.fileContexts && message.metadata.fileContexts.length > 0) {
+      const fetchFiles = async () => {
+        const { data } = await supabase
+          .from('file_contexts')
+          .select('id, file_name, file_type, file_size')
+          .in('id', message.metadata.fileContexts);
+        
+        if (data) {
+          setAttachedFiles(data);
+        }
+      };
+      fetchFiles();
+    }
+  }, [message.metadata?.fileContexts]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return Image;
+    if (type.includes('pdf') || type.includes('document')) return FileText;
+    if (type.includes('json') || type.includes('csv')) return Database;
+    return Code;
   };
 
   return (
@@ -60,6 +96,27 @@ const MessageItem = memo(function MessageItem({
           </div>
         ) : (
           <>
+            {/* 첨부 파일 표시 */}
+            {attachedFiles.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {attachedFiles.map(file => {
+                  const Icon = getFileIcon(file.file_type);
+                  return (
+                    <div
+                      key={file.id}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm"
+                    >
+                      <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <span className="text-blue-900 dark:text-blue-100">{file.file_name}</span>
+                      <span className="text-xs text-blue-600 dark:text-blue-400">
+                        ({(file.file_size / 1024).toFixed(1)} KB)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* 메시지 내용 */}
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown
@@ -130,10 +187,11 @@ const MessageItem = memo(function MessageItem({
             )}
           </button>
           
-          {message.role === 'assistant' && (
+          {message.role === 'assistant' && onRegenerate && (
             <button
-              onClick={() => {/* 재생성 로직 */}}
+              onClick={onRegenerate}
               className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+              title="다시 생성"
             >
               <RefreshCw className="w-4 h-4" />
             </button>

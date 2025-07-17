@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAIChatStore } from '@/store/useAIChatStore';
 import MessageItem from './MessageItem';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 interface ChatMessagesProps {
   className?: string;
@@ -11,9 +13,19 @@ interface ChatMessagesProps {
 export default function ChatMessages({ className }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
   
-  const { activeSessionId, streamingMessageId, messages: allMessages } = useAIChatStore();
+  const { 
+    activeSessionId, 
+    streamingMessageId, 
+    messages: allMessages,
+    sessions,
+    providerSettings,
+    updateMessage,
+    setStreamingMessageId
+  } = useAIChatStore();
   const messages = activeSessionId ? allMessages[activeSessionId] || [] : [];
+  const supabase = createClient();
 
   // 자동 스크롤
   useEffect(() => {
@@ -31,6 +43,114 @@ export default function ChatMessages({ className }: ChatMessagesProps) {
     
     setAutoScroll(isAtBottom);
   };
+
+  // 메시지 재생성
+  const handleRegenerate = useCallback(async (messageId: string) => {
+    if (!activeSessionId || regeneratingMessageId) return;
+
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    if (messageIndex === -1) return;
+
+    // 이전 사용자 메시지 찾기
+    let userMessageIndex = -1;
+    for (let i = messageIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        userMessageIndex = i;
+        break;
+      }
+    }
+
+    if (userMessageIndex === -1) {
+      toast.error('재생성할 사용자 메시지를 찾을 수 없습니다');
+      return;
+    }
+
+    const userMessage = messages[userMessageIndex];
+    const currentSession = sessions.find(s => s.id === activeSessionId);
+    
+    if (!currentSession) return;
+
+    // 재생성 시작
+    setRegeneratingMessageId(messageId);
+    updateMessage(activeSessionId, messageId, { content: '', isStreaming: true });
+    setStreamingMessageId(messageId);
+
+    try {
+      // 이전 메시지들 가져오기 (재생성하는 메시지 이전까지)
+      const messagesToSend = messages.slice(0, userMessageIndex + 1).map(m => ({
+        role: m.role,
+        content: m.content
+      })).slice(-10); // 최근 10개 메시지만
+
+      // Edge Function 호출
+      const { data: { session } } = await supabase.auth.getSession();
+      const provider = currentSession.provider || 'openai';
+      const settings = providerSettings[provider] || {};
+      const model = currentSession.model || settings.model || '';
+
+      const response = await supabase.functions.invoke('chat', {
+        body: {
+          messages: messagesToSend,
+          provider,
+          model,
+          temperature: settings?.temperature || 0.7,
+          maxTokens: settings?.maxTokens || 4096,
+          stream: false,
+          fileContexts: userMessage.metadata?.fileContexts || []
+        },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
+
+      if (response.error) {
+        // 429 에러 처리
+        if (response.error.message?.includes('429') || response.error.message?.includes('Too Many Requests')) {
+          throw new Error('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+        }
+        throw response.error;
+      }
+
+      const data = response.data;
+      let content = '';
+
+      if (provider === 'anthropic') {
+        content = data.content?.[0]?.text || '';
+      } else if (provider === 'google') {
+        content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      } else {
+        content = data.choices?.[0]?.message?.content || '';
+      }
+
+      // 메시지 업데이트
+      updateMessage(activeSessionId, messageId, { 
+        content, 
+        isStreaming: false,
+        createdAt: new Date()
+      });
+
+      // DB 업데이트
+      await supabase.from('ai_chat_messages')
+        .update({ 
+          content,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', messageId);
+
+    } catch (error) {
+      console.error('Failed to regenerate message:', error);
+      const errorMessage = error instanceof Error ? error.message : '메시지 재생성에 실패했습니다';
+      toast.error(errorMessage);
+      
+      // 에러 시 원래 메시지로 복구
+      updateMessage(activeSessionId, messageId, { 
+        isStreaming: false 
+      });
+    } finally {
+      setRegeneratingMessageId(null);
+      setStreamingMessageId(null);
+    }
+  }, [activeSessionId, messages, sessions, providerSettings, updateMessage, setStreamingMessageId, supabase]);
 
   return (
     <div 
@@ -50,6 +170,11 @@ export default function ChatMessages({ className }: ChatMessagesProps) {
             isStreaming={
               streamingMessageId === message.id &&
               message.role === 'assistant'
+            }
+            onRegenerate={
+              message.role === 'assistant' 
+                ? () => handleRegenerate(message.id)
+                : undefined
             }
           />
         ))}

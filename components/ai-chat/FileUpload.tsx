@@ -46,69 +46,71 @@ export default function FileUpload({
     setFiles(prev => [...prev, processedFile]);
 
     try {
-      // 1. Upload to Storage
-      const fileName = `${Date.now()}-${file.name}`;
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // 1. Upload to Storage with user folder structure
+      const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('chat-attachments')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) throw uploadError;
 
-      // 2. Create database record (temporarily commented out for build)
-      // const { data: dbData, error: dbError } = await supabase
-      //   .from('file_contexts')
-      //   .insert({
-      //     file_name: file.name,
-      //     file_type: file.type,
-      //     file_size: file.size,
-      //     storage_path: uploadData.path,
-      //     status: 'processing'
-      //   })
-      //   .select()
-      //   .single();
+      // 2. Create database record
+      const { data: dbData, error: dbError } = await supabase
+        .from('file_contexts')
+        .insert({
+          user_id: user.id,
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+          storage_path: uploadData.path,
+          status: 'processing'
+        })
+        .select()
+        .single();
 
-      // if (dbError) throw dbError;
-      
-      // Mock dbData for build (commented out as not used)
-      // const dbData = { id: crypto.randomUUID() };
+      if (dbError) throw dbError;
 
       // 3. Update status to processing  
       updateFileStatus(fileId, 'processing');
       updateFileProgress(fileId, 100);
 
-      // 4. Trigger processing (for large files) - temporarily commented out for build
+      // 4. Process file content
       if (file.size > 100 * 1024 || !file.type.startsWith('text/')) {
-        // Async processing via Edge Function - commented out for build
-        // await supabase.functions.invoke('process-file', {
-        //   body: {
-        //     fileId: dbData.id,
-        //     fileName: file.name,
-        //     fileType: file.type,
-        //     storagePath: uploadData.path
-        //   }
-        // });
+        // Large files or non-text files - mark as ready without text extraction
+        await supabase
+          .from('file_contexts')
+          .update({
+            status: 'ready',
+            processed_at: new Date().toISOString()
+          })
+          .eq('id', dbData.id);
 
-        // Mock processing for build
-        setTimeout(() => {
-          updateFileStatus(fileId, 'ready', 'Mock processed content');
-        }, 1000);
+        updateFileStatus(fileId, 'ready');
       } else {
         // Small text files - process immediately
         const text = await file.text();
-        // await supabase
-        //   .from('file_contexts')
-        //   .update({
-        //     content_text: text,
-        //     status: 'ready',
-        //     processed_at: new Date().toISOString()
-        //   })
-        //   .eq('id', dbData.id);
+        await supabase
+          .from('file_contexts')
+          .update({
+            content_text: text,
+            status: 'ready',
+            processed_at: new Date().toISOString()
+          })
+          .eq('id', dbData.id);
 
         updateFileStatus(fileId, 'ready', text);
       }
 
       return {
         ...processedFile,
+        id: dbData.id, // Use the actual file_context ID from database
         status: 'ready',
         url: uploadData.path
       };
@@ -152,7 +154,11 @@ export default function FileUpload({
         acceptedFiles.map(file => processFile(file))
       );
 
-      onFilesProcessed(processedFiles.filter(f => f.status === 'ready'));
+      // Filter out any failed files and pass only ready ones
+      const readyFiles = processedFiles.filter(f => f.status === 'ready');
+      if (readyFiles.length > 0) {
+        onFilesProcessed(readyFiles);
+      }
     } catch {
       toast.error('파일 처리 중 오류가 발생했습니다');
     } finally {
@@ -190,84 +196,128 @@ export default function FileUpload({
       <div
         {...getRootProps()}
         className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+          border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
           transition-all duration-200 
           ${isDragActive 
-            ? 'border-primary bg-primary/5 scale-[1.02]' 
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.01]' 
+            : 'border-muted-foreground/25 hover:border-muted-foreground/50 bg-muted/30'
           }
           ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
         <input {...getInputProps()} disabled={isProcessing} />
-        <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        {isDragActive ? (
-          <p className="text-primary font-medium">파일을 여기에 놓으세요</p>
-        ) : (
-          <>
-            <p className="text-gray-600 mb-2">
-              파일을 드래그하거나 클릭하여 업로드
-            </p>
-            <p className="text-sm text-gray-400">
-              PDF, 문서, 이미지, 코드 파일 지원 (최대 {maxSize / 1024 / 1024}MB)
-            </p>
-          </>
-        )}
+        <div className="flex flex-col items-center gap-3">
+          <div className={`p-3 rounded-full ${isDragActive ? 'bg-blue-100 dark:bg-blue-800' : 'bg-muted'}`}>
+            <Upload className={`w-8 h-8 ${isDragActive ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}`} />
+          </div>
+          {isDragActive ? (
+            <div>
+              <p className="text-blue-600 dark:text-blue-400 font-medium">파일을 여기에 놓으세요</p>
+              <p className="text-sm text-blue-500 dark:text-blue-300 mt-1">파일이 업로드됩니다</p>
+            </div>
+          ) : (
+            <div>
+              <p className="font-medium text-foreground">
+                클릭하거나 파일을 드래그하세요
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                PDF, Word, 텍스트, 이미지, 코드 파일 지원
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                최대 {maxFiles}개 파일, 각 {maxSize / 1024 / 1024}MB까지
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {files.length > 0 && (
         <div className="space-y-2">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-muted-foreground">업로드 중인 파일</p>
+            <p className="text-xs text-muted-foreground">{files.length}개 파일</p>
+          </div>
           {files.map(file => {
             const Icon = getFileIcon(file.type);
             
             return (
               <div
                 key={file.id}
-                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border/50 transition-all hover:bg-muted/70"
               >
-                <Icon className="w-5 h-5 text-gray-600 flex-shrink-0" />
+                <div className={`p-2 rounded-lg ${
+                  file.status === 'error' ? 'bg-red-100 dark:bg-red-900/20' : 
+                  file.status === 'ready' ? 'bg-green-100 dark:bg-green-900/20' : 
+                  'bg-blue-100 dark:bg-blue-900/20'
+                }`}>
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${
+                    file.status === 'error' ? 'text-red-600 dark:text-red-400' :
+                    file.status === 'ready' ? 'text-green-600 dark:text-green-400' :
+                    'text-blue-600 dark:text-blue-400'
+                  }`} />
+                </div>
                 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {(file.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {file.status === 'uploading' && (
-                    <div className="w-20">
-                      <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-300"
-                          style={{ width: `${file.progress}%` }}
-                        />
+                    <div className="w-24">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-500 transition-all duration-300"
+                              style={{ width: `${file.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground w-10 text-right">{file.progress}%</span>
                       </div>
                     </div>
                   )}
 
                   {file.status === 'processing' && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                      <span className="text-xs text-gray-500">처리 중</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground">처리 중</span>
                     </div>
                   )}
 
                   {file.status === 'ready' && (
-                    <span className="text-xs text-green-600">준비됨</span>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-xs text-green-600 dark:text-green-400">준비됨</span>
+                    </div>
                   )}
 
                   {file.status === 'error' && (
-                    <span className="text-xs text-red-600" title={file.error}>
-                      오류
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs text-red-600 dark:text-red-400" title={file.error}>
+                        오류
+                      </span>
+                    </div>
                   )}
 
                   <button
                     onClick={() => removeFile(file.id)}
-                    className="p-1 hover:bg-gray-200 rounded"
+                    className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                    title="파일 제거"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
                   </button>
                 </div>
               </div>

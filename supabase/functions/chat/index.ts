@@ -13,6 +13,7 @@ interface ChatRequest {
   temperature?: number
   maxTokens?: number
   stream?: boolean
+  fileContexts?: string[]  // 파일 컨텍스트 ID 배열
 }
 
 interface Message {
@@ -63,9 +64,9 @@ serve(async (req) => {
 
     // Parse request body
     const body: ChatRequest = await req.json()
-    const { messages, provider, model, temperature, maxTokens, stream } = body
+    const { messages, provider, model, temperature, maxTokens, stream, fileContexts } = body
 
-    console.log('Request details:', { provider, model, userId: user.id })
+    console.log('Request details:', { provider, model, userId: user.id, fileContexts })
 
     // Handle model name mappings
     let actualModel = model
@@ -109,6 +110,53 @@ serve(async (req) => {
       )
     }
 
+    // Process messages with file contexts
+    let processedMessages = [...messages]
+    
+    // If there are file contexts, fetch them and append to the last user message
+    if (fileContexts && fileContexts.length > 0) {
+      console.log('Fetching file contexts:', fileContexts)
+      
+      const { data: files, error: filesError } = await supabase
+        .from('file_contexts')
+        .select('id, file_name, file_type, file_size, content_text, storage_path')
+        .in('id', fileContexts)
+        .eq('user_id', user.id)
+      
+      if (filesError) {
+        console.error('Error fetching file contexts:', filesError)
+      } else if (files && files.length > 0) {
+        // Find the last user message
+        const lastUserMessageIndex = processedMessages.findLastIndex(m => m.role === 'user')
+        if (lastUserMessageIndex !== -1) {
+          let fileContextText = '\n\n--- 첨부된 파일 ---\n'
+          
+          for (const file of files) {
+            fileContextText += `\n📎 ${file.file_name} (${(file.file_size / 1024).toFixed(1)} KB)\n`
+            
+            // If it's an image, get the public URL
+            if (file.file_type.startsWith('image/')) {
+              const { data: publicUrl } = supabase.storage
+                .from('chat-attachments')
+                .getPublicUrl(file.storage_path)
+              
+              if (publicUrl) {
+                fileContextText += `[이미지 파일: ${publicUrl.publicUrl}]\n`
+              }
+            }
+            
+            // If we have text content, include it
+            if (file.content_text) {
+              fileContextText += `내용:\n${file.content_text}\n`
+            }
+          }
+          
+          // Append file context to the last user message
+          processedMessages[lastUserMessageIndex].content += fileContextText
+        }
+      }
+    }
+
     // Get custom URL if provider is custom
     let customUrl: string | undefined
     if (provider === 'custom') {
@@ -129,19 +177,19 @@ serve(async (req) => {
     try {
       switch (provider) {
         case 'openai':
-          response = await callOpenAI(apiKey, messages, model, temperature, maxTokens, stream)
+          response = await callOpenAI(apiKey, processedMessages, model, temperature, maxTokens, stream)
           break
         case 'anthropic':
-          response = await callAnthropic(apiKey, messages, model, temperature, maxTokens, stream)
+          response = await callAnthropic(apiKey, processedMessages, model, temperature, maxTokens, stream)
           break
         case 'google':
-          response = await callGoogle(apiKey, messages, model, temperature, maxTokens, stream)
+          response = await callGoogle(apiKey, processedMessages, model, temperature, maxTokens, stream)
           break
         case 'grok':
-          response = await callGrok(apiKey, messages, model, temperature, maxTokens, stream)
+          response = await callGrok(apiKey, processedMessages, model, temperature, maxTokens, stream)
           break
         case 'custom':
-          response = await callCustom(apiKey, messages, model, temperature, maxTokens, stream, customUrl)
+          response = await callCustom(apiKey, processedMessages, model, temperature, maxTokens, stream, customUrl)
           break
         default:
           return new Response(
