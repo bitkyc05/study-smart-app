@@ -60,6 +60,7 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
   const [hasApiKey, setHasApiKey] = useState<Record<string, boolean>>({});
   const [customModel, setCustomModel] = useState('');
   const [keyUpdateCounter, setKeyUpdateCounter] = useState(0);
+  const [modelsFetchedAt, setModelsFetchedAt] = useState<Record<string, number>>({});
 
   const currentSettings = providerSettings[selectedProvider] || {
     model: '',
@@ -79,32 +80,61 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Check for API keys and fetch models
+  // Load cached models from localStorage on mount
+  useEffect(() => {
+    const cachedModels = localStorage.getItem('ai-chat-models');
+    if (cachedModels) {
+      try {
+        const parsed = JSON.parse(cachedModels);
+        setModels(parsed.models || {});
+        setModelsFetchedAt(parsed.fetchedAt || {});
+      } catch (e) {
+        console.error('Failed to parse cached models:', e);
+      }
+    }
+  }, []);
+
+  // Save models to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(models).length > 0) {
+      localStorage.setItem('ai-chat-models', JSON.stringify({
+        models,
+        fetchedAt: modelsFetchedAt
+      }));
+    }
+  }, [models, modelsFetchedAt]);
+
+  // Check for API keys only (no automatic model fetching)
   useEffect(() => {
     if (!userId) return;
 
-    const checkApiKeysAndFetchModels = async () => {
-      const providers = Object.keys(PROVIDER_OPTIONS) as (keyof typeof PROVIDER_OPTIONS)[];
+    const checkApiKeys = async () => {
+      const keys = await keyService.getUserKeys(userId);
+      const keyMap: Record<string, boolean> = {};
       
-      for (const provider of providers) {
-        // Check if user has API key
-        const keys = await keyService.getUserKeys(userId);
+      for (const provider of Object.keys(PROVIDER_OPTIONS)) {
         const hasKey = keys.some(k => k.provider === provider && k.is_active);
-        setHasApiKey(prev => ({ ...prev, [provider]: hasKey }));
-
-        // Fetch models if has key and not custom provider
-        if (hasKey && provider !== 'custom') {
-          await fetchModelsForProvider(provider);
-        }
+        keyMap[provider] = hasKey;
       }
+      
+      setHasApiKey(keyMap);
     };
 
-    checkApiKeysAndFetchModels();
+    checkApiKeys();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, refreshTrigger, keyUpdateCounter]); // Add refreshTrigger and keyUpdateCounter to dependencies
+  }, [userId, keyUpdateCounter]); // Removed refreshTrigger
 
-  const fetchModelsForProvider = async (provider: string) => {
+  const fetchModelsForProvider = async (provider: string, forceRefresh = false) => {
     if (!userId) return;
+    
+    // Check if we have cached models and they're fresh (less than 1 hour old)
+    const cachedTime = modelsFetchedAt[provider];
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    
+    if (!forceRefresh && cachedTime && cachedTime > oneHourAgo && models[provider]?.length > 0) {
+      console.log(`Using cached models for ${provider}`);
+      return;
+    }
     
     console.log(`Fetching models for provider: ${provider}`);
     setLoadingModels(provider);
@@ -117,6 +147,7 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
 
       if (!error && data?.models && data.models.length > 0) {
         setModels(prev => ({ ...prev, [provider]: data.models }));
+        setModelsFetchedAt(prev => ({ ...prev, [provider]: Date.now() }));
         console.log(`Set models for ${provider}:`, data.models);
         
         // If current model is empty or not in the list, set first model as default
@@ -185,6 +216,17 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
       setCustomModel(currentSettings.model);
     }
   }, [selectedProvider, currentSettings.model]);
+
+  // When provider changes, fetch models only if not cached
+  useEffect(() => {
+    if (selectedProvider && hasApiKey[selectedProvider] && selectedProvider !== 'custom') {
+      // Only fetch if we don't have cached models
+      if (!models[selectedProvider] || models[selectedProvider].length === 0) {
+        fetchModelsForProvider(selectedProvider);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProvider]);
 
   const handleSettingChange = (key: string, value: string | number) => {
     setProviderSettings(selectedProvider, {
@@ -272,19 +314,14 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
                     return (
                       <button
                         key={key}
-                        onClick={async () => {
+                        onClick={() => {
                           const newProvider = key as keyof typeof PROVIDER_OPTIONS;
                           setSelectedProvider(newProvider);
-                          
-                          // 프로바이더 변경 시 모델 리스트 다시 가져오기
-                          if (hasApiKey[newProvider] && newProvider !== 'custom') {
-                            await fetchModelsForProvider(newProvider);
-                          }
                           
                           // 현재 세션의 프로바이더도 업데이트
                           if (activeSessionId) {
                             const providerModels = models[newProvider] || PROVIDER_OPTIONS[newProvider].defaultModels;
-                            const firstModel = providerModels[0] || '';
+                            const firstModel = providerModels[0] || providerSettings[newProvider]?.model || '';
                             
                             updateSession(activeSessionId, { 
                               provider: newProvider,
@@ -292,10 +329,12 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
                             });
                             
                             // providerSettings도 업데이트
-                            setProviderSettings(newProvider, {
-                              ...providerSettings[newProvider],
-                              model: firstModel
-                            });
+                            if (firstModel && !providerSettings[newProvider]?.model) {
+                              setProviderSettings(newProvider, {
+                                ...providerSettings[newProvider],
+                                model: firstModel
+                              });
+                            }
                           }
                         }}
                         className={cn(
@@ -468,6 +507,7 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
                 <APIKeyManager 
                   userId={userId} 
                   onKeyUpdate={() => setKeyUpdateCounter(prev => prev + 1)}
+                  onModelRefresh={(provider) => fetchModelsForProvider(provider, true)}
                 />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

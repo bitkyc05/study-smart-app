@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 interface APIKeyManagerProps {
   userId: string;
   onKeyUpdate?: () => void;
+  onModelRefresh?: (provider: string) => void;
 }
 
 const PROVIDERS = [
@@ -66,7 +67,7 @@ const PROVIDERS = [
   }
 ];
 
-export default function APIKeyManager({ userId, onKeyUpdate }: APIKeyManagerProps) {
+export default function APIKeyManager({ userId, onKeyUpdate, onModelRefresh }: APIKeyManagerProps) {
   const [keys, setKeys] = useState<Record<string, APIKeyMetadata>>({});
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState<string | null>(null);
@@ -132,7 +133,11 @@ export default function APIKeyManager({ userId, onKeyUpdate }: APIKeyManagerProp
         setNewKeys(prev => ({ ...prev, [provider]: '' }));
         setCustomUrl('');
         await loadKeys();
-        // Notify parent component to refresh models
+        // Notify parent component to refresh models for this specific provider
+        if (onModelRefresh) {
+          onModelRefresh(provider);
+        }
+        // Also trigger general key update
         if (onKeyUpdate) {
           onKeyUpdate();
         }
@@ -175,6 +180,10 @@ export default function APIKeyManager({ userId, onKeyUpdate }: APIKeyManagerProp
 
       if (result.valid) {
         toast.success('API key is working correctly');
+        // Refresh models for this provider when test succeeds
+        if (onModelRefresh) {
+          onModelRefresh(provider);
+        }
       } else {
         toast.error(result.error || 'API key validation failed');
       }
@@ -298,11 +307,12 @@ export default function APIKeyManager({ userId, onKeyUpdate }: APIKeyManagerProp
                 onClick={() => handleTestKey(provider.id)}
                 disabled={isValidatingThis}
                 className="flex-1 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                title="Test API key and refresh model list"
               >
                 {isValidatingThis ? (
                   <RefreshCw className="w-4 h-4 mx-auto animate-spin" />
                 ) : (
-                  'Test'
+                  'Test & Refresh Models'
                 )}
               </button>
               <button
