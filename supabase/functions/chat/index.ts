@@ -309,11 +309,74 @@ async function callGoogle(
   console.log('Calling Google Gemini with model:', model)
   console.log('API Key loaded:', !!apiKey)
   
-  // Convert messages to Google format
-  const contents = messages.filter(m => m.role !== 'system').map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }]
-  }))
+  // Helper function to extract image URLs from content
+  const extractImageUrls = (content: string): { text: string, imageUrls: string[] } => {
+    const imageRegex = /\[이미지 파일: ([^\]]+)\]/g
+    const imageUrls: string[] = []
+    let match
+    
+    while ((match = imageRegex.exec(content)) !== null) {
+      imageUrls.push(match[1])
+    }
+    
+    // Remove image URL tags from text
+    const cleanText = content.replace(imageRegex, '').trim()
+    
+    return { text: cleanText, imageUrls }
+  }
+  
+  // Helper function to fetch and convert image to base64
+  const fetchImageAsBase64 = async (url: string): Promise<{ imageBytes: string, mimeType: string } | null> => {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) {
+        console.error('Failed to fetch image:', url)
+        return null
+      }
+      
+      const arrayBuffer = await response.arrayBuffer()
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+      const mimeType = response.headers.get('content-type') || 'image/jpeg'
+      
+      return { imageBytes: base64, mimeType }
+    } catch (error) {
+      console.error('Error fetching image:', error)
+      return null
+    }
+  }
+  
+  // Convert messages to Google format with multimodal support
+  const contents = await Promise.all(
+    messages
+      .filter(m => m.role !== 'system')
+      .map(async (m) => {
+        const { text, imageUrls } = extractImageUrls(m.content)
+        const parts: any[] = []
+        
+        // Add text part if exists
+        if (text) {
+          parts.push({ text })
+        }
+        
+        // Add image parts
+        for (const imageUrl of imageUrls) {
+          const imageData = await fetchImageAsBase64(imageUrl)
+          if (imageData) {
+            parts.push({
+              inline_data: {
+                mime_type: imageData.mimeType,
+                data: imageData.imageBytes
+              }
+            })
+          }
+        }
+        
+        return {
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts
+        }
+      })
+  )
 
   const requestBody = {
     contents,
