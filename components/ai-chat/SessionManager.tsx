@@ -34,6 +34,8 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useAIChatStore } from '@/store/useAIChatStore';
+import { APIKeyService } from '@/lib/services/api-key-service';
+import { createClient } from '@/lib/supabase/client';
 
 interface SessionManagerProps {
   userId: string;
@@ -70,8 +72,18 @@ export default function SessionManager({
   const [draggedSession, setDraggedSession] = useState<string | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   
+  const supabase = useMemo(() => createClient(), []);
   const sessionService = useMemo(() => new ChatSessionService(), []);
+  const keyService = useMemo(() => new APIKeyService(supabase), [supabase]);
   const { activeSessionId, setActiveSession, sessions: storeSessions, addSession } = useAIChatStore();
+
+  const PROVIDER_OPTIONS = {
+    openai: { name: 'OpenAI', defaultModels: ['o3-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'] },
+    anthropic: { name: 'Anthropic', defaultModels: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'] },
+    google: { name: 'Google', defaultModels: ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-pro', 'gemini-pro-vision'] },
+    grok: { name: 'Grok', defaultModels: ['grok-1'] },
+    custom: { name: 'Custom', defaultModels: [] }
+  };
 
   const loadSessions = useCallback(async () => {
     if (!userId) {
@@ -172,9 +184,34 @@ export default function SessionManager({
     }
 
     try {
+      // API 키가 있는 프로바이더 확인
+      const userKeys = await keyService.getUserKeys(userId);
+      const availableProviders = userKeys.map(key => key.provider);
+      
+      if (availableProviders.length === 0) {
+        // API 키가 없을 때 안내
+        if (confirm('AI 채팅을 사용하려면 API 키 설정이 필요합니다.\n설정 페이지로 이동하시겠습니까?')) {
+          // ChatMain의 설정 탭으로 이동하도록 처리
+          setShowNewSessionDialog(false);
+          if (onClose) {
+            onClose();
+          }
+          // 부모 컴포넌트에서 설정 탭을 열도록 이벤트 전달
+          window.dispatchEvent(new CustomEvent('openChatSettings'));
+        }
+        return;
+      }
+
+      // 첫 번째 사용 가능한 프로바이더를 기본값으로 설정
+      const defaultProvider = availableProviders[0];
+      const defaultModels = PROVIDER_OPTIONS[defaultProvider as keyof typeof PROVIDER_OPTIONS]?.defaultModels || [];
+      const defaultModel = defaultModels[0] || '';
+
       const newSession = await sessionService.createSession(userId, {
         title: newSessionTitle,
-        folderId: selectedFolder || undefined
+        folderId: selectedFolder || undefined,
+        provider: defaultProvider,
+        model: defaultModel
       });
       
       setNewSessionTitle('');

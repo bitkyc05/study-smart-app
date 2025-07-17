@@ -168,7 +168,7 @@ export class ChatSessionService {
         title: data.title,
         folder_id: data.folderId,
         metadata: JSON.parse(JSON.stringify(data.metadata || {})),
-        provider_settings: JSON.parse(JSON.stringify(providerSettings)),
+        provider_settings: providerSettings ? JSON.parse(JSON.stringify(providerSettings)) : null,
         is_archived: false
       })
       .select()
