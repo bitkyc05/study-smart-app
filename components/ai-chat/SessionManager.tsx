@@ -11,18 +11,14 @@ import {
 import { 
   Search, 
   Folder, 
-  Tag, 
   Star, 
   Archive,
   Trash2,
   Download,
   Upload,
-  Share2,
   MoreVertical,
-  Calendar,
   MessageSquare,
   Zap,
-  Filter,
   Plus,
   FolderOpen,
   X,
@@ -33,7 +29,6 @@ import {
   FileImage,
   Loader2,
   Sparkles,
-  Bot,
   GripVertical
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,7 +64,6 @@ export default function SessionManager({
   const [selectedFolder] = useState<string | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'json' | 'markdown' | 'pdf'>('json');
   const [exportLoading, setExportLoading] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importLoading, setImportLoading] = useState(false);
@@ -108,7 +102,7 @@ export default function SessionManager({
               createdAt: new Date(session.created_at),
               updatedAt: new Date(session.updated_at),
               lastMessageAt: session.last_message_at ? new Date(session.last_message_at) : undefined,
-              messageCount: session.message_count,
+              messageCount: session.message_count || 0,
               isArchived: session.is_archived,
               providerSettings: session.provider_settings
             });
@@ -119,8 +113,8 @@ export default function SessionManager({
       }
       
       setHasMore(result.hasMore);
-    } catch (error: any) {
-      console.error('Failed to load sessions:', error?.message || error);
+    } catch (error: unknown) {
+      console.error('Failed to load sessions:', error instanceof Error ? error.message : error);
       // Show empty state instead of error
       setSessions([]);
       setHasMore(false);
@@ -497,7 +491,7 @@ export default function SessionManager({
                   : 'bg-muted hover:bg-muted/80'
               }`}
               style={{
-                backgroundColor: filter.tags?.includes(tag.id) ? tag.color : undefined
+                backgroundColor: filter.tags?.includes(tag.id) ? (tag.color || undefined) : undefined
               }}
             >
               {tag.name}
@@ -615,12 +609,12 @@ export default function SessionManager({
               )}
             </button>
           )}
-          <Folder className="w-4 h-4 mr-2" style={{ color: folder.color }} />
+          <Folder className="w-4 h-4 mr-2" style={{ color: folder.color || undefined }} />
           {folder.name}
         </button>
         {isExpanded && hasChildren && (
           <div>
-            {folder.children.map((child: ChatFolder) => (
+            {folder.children?.map((child: ChatFolder) => (
               <FolderItem
                 key={child.id}
                 folder={child}

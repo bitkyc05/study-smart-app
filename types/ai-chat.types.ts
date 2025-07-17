@@ -24,6 +24,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   createdAt: Date;
+  isStreaming?: boolean;
   metadata?: {
     model?: string;
     tokensUsed?: number;

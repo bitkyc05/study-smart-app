@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
 import { 
-  ChatSession, 
   ChatFolder, 
   ChatTag, 
   ChatSessionWithRelations,
@@ -36,10 +35,9 @@ export class ChatSessionService {
 
     // 검색어 필터
     if (filter.search) {
-      query = query.or(`
-        title.ilike.%${filter.search}%,
-        summary.ilike.%${filter.search}%
-      `);
+      query = query.or(
+        `title.ilike.%${filter.search}%,summary.ilike.%${filter.search}%`
+      );
     }
 
     // 폴더 필터
@@ -169,8 +167,8 @@ export class ChatSessionService {
         user_id: userId,
         title: data.title,
         folder_id: data.folderId,
-        metadata: data.metadata || {},
-        provider_settings: providerSettings,
+        metadata: JSON.parse(JSON.stringify(data.metadata || {})),
+        provider_settings: JSON.parse(JSON.stringify(providerSettings)),
         is_archived: false
       })
       .select()
@@ -218,7 +216,7 @@ export class ChatSessionService {
       
       if (currentSession) {
         updateData.provider_settings = {
-          ...currentSession.provider_settings,
+          ...(typeof currentSession.provider_settings === 'object' && currentSession.provider_settings !== null ? currentSession.provider_settings : {}),
           ...(updates.provider && { provider: updates.provider }),
           ...(updates.model && { model: updates.model })
         };
@@ -503,7 +501,7 @@ export class ChatSessionService {
   // 가져오기
   async importSession(
     userId: string,
-    data: any
+    data: Record<string, unknown>
   ): Promise<string> {
     const supabase = this.supabase;
     
@@ -512,13 +510,13 @@ export class ChatSessionService {
       .from('ai_chat_sessions')
       .insert({
         user_id: userId,
-        title: data.title + ' (가져옴)',
-        metadata: {
-          ...data.metadata,
+        title: (data.title as string) + ' (가져옴)',
+        metadata: JSON.parse(JSON.stringify({
+          ...(data.metadata || {}),
           imported_at: new Date().toISOString(),
           original_id: data.id
-        },
-        provider_settings: data.provider_settings,
+        })),
+        provider_settings: JSON.parse(JSON.stringify(data.provider_settings || {})),
         is_archived: false
       })
       .select()
@@ -527,15 +525,20 @@ export class ChatSessionService {
     if (error) throw error;
 
     // 메시지 가져오기
-    if (data.ai_chat_messages && data.ai_chat_messages.length > 0) {
-      const messages = data.ai_chat_messages.map((msg: any) => ({
-        session_id: newSession.id,
-        user_id: userId,
-        role: msg.role,
-        content: msg.content,
-        metadata: msg.metadata,
-        created_at: msg.created_at
-      }));
+    if (Array.isArray(data.ai_chat_messages) && data.ai_chat_messages.length > 0) {
+      const messages = (data.ai_chat_messages as unknown[]).map((msg) => {
+        const msgData = msg as Record<string, unknown>;
+        return {
+          session_id: newSession.id,
+          user_id: userId,
+          role: (msgData.role as string) === 'user' || (msgData.role as string) === 'assistant' || (msgData.role as string) === 'system' 
+            ? (msgData.role as 'user' | 'assistant' | 'system') 
+            : 'user',
+          content: msgData.content as string,
+          metadata: JSON.parse(JSON.stringify(msgData.metadata || {})),
+          created_at: msgData.created_at as string
+        };
+      });
 
       await supabase
         .from('ai_chat_messages')
@@ -577,24 +580,29 @@ export class ChatSessionService {
 
   // 헬퍼 메서드들
   private transformSession(
-    raw: any,
-    sessionTags: any[],
+    raw: Record<string, unknown>,
+    sessionTags: Record<string, unknown>[],
     favoriteSet: Set<string>
   ): ChatSessionWithRelations {
     const tags = sessionTags
       .filter(st => st.session_id === raw.id && st.chat_tags)
-      .map(st => st.chat_tags.name);
+      .map(st => {
+        const tag = st.chat_tags as Record<string, unknown>;
+        return tag?.name as string;
+      })
+      .filter(name => name); // undefined 제거
 
     // provider_settings에서 provider와 model 추출
-    const provider = raw.provider_settings?.provider || 'openai';
-    const model = raw.provider_settings?.model || '';
+    const providerSettings = raw.provider_settings as Record<string, unknown> || {};
+    const provider = providerSettings.provider as string || 'openai';
+    const model = providerSettings.model as string || '';
 
     return {
-      ...raw,
+      ...(raw as Omit<ChatSessionWithRelations, 'provider' | 'model' | 'tags' | 'isFavorite'>),
       provider,
       model,
       tags: tags,
-      isFavorite: favoriteSet.has(raw.id)
+      isFavorite: favoriteSet.has(raw.id as string)
     };
   }
 
@@ -648,19 +656,21 @@ export class ChatSessionService {
     return rootFolders;
   }
 
-  private convertToMarkdown(session: any): string {
-    let markdown = `# ${session.title}\n\n`;
-    markdown += `Created: ${new Date(session.created_at).toLocaleDateString()}\n\n`;
+  private convertToMarkdown(session: Record<string, unknown>): string {
+    let markdown = `# ${session.title as string}\n\n`;
+    markdown += `Created: ${new Date(session.created_at as string).toLocaleDateString()}\n\n`;
     
     if (session.summary) {
-      markdown += `## Summary\n${session.summary}\n\n`;
+      markdown += `## Summary\n${session.summary as string}\n\n`;
     }
 
     markdown += `## Messages\n\n`;
     
-    for (const msg of session.ai_chat_messages || []) {
-      markdown += `### ${msg.role.toUpperCase()}\n`;
-      markdown += `${msg.content}\n\n`;
+    const messages = (session.ai_chat_messages as unknown[]) || [];
+    for (const msg of messages) {
+      const message = msg as Record<string, unknown>;
+      markdown += `### ${(message.role as string).toUpperCase()}\n`;
+      markdown += `${message.content as string}\n\n`;
     }
 
     return markdown;

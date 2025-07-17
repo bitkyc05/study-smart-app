@@ -32,7 +32,7 @@ export interface ChatFolder {
   color?: string | null;
   icon?: string | null;
   parent_id?: string | null;
-  position: number;
+  position: number | null;
   created_at: string;
   updated_at: string;
   
@@ -45,7 +45,7 @@ export interface ChatTag {
   id: string;
   user_id: string;
   name: string;
-  color: string;
+  color: string | null;
   created_at: string;
 }
 
@@ -72,6 +72,8 @@ export interface ChatSessionWithRelations extends ChatSession {
   tags: string[];
   isFavorite: boolean;
   folder?: ChatFolder;
+  provider: string;
+  model: string;
 }
 
 export interface SessionFilter {

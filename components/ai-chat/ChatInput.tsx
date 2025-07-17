@@ -17,6 +17,7 @@ export default function ChatInput({ className }: ChatInputProps) {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<ProcessedFile[]>([]);
+  const [isSending, setIsSending] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { 
@@ -64,6 +65,7 @@ export default function ChatInput({ className }: ChatInputProps) {
   ]);
 
   const handleSend = async () => {
+    if (isSending) return; // 이미 전송 중이면 무시
     if (!message.trim() && attachedFiles.length === 0) return;
     if (streamingMessageId) return;
 
@@ -72,6 +74,8 @@ export default function ChatInput({ className }: ChatInputProps) {
       alert('로그인이 필요합니다.');
       return;
     }
+
+    setIsSending(true); // 전송 시작
 
     let sessionId = activeSessionId;
 
@@ -114,6 +118,7 @@ export default function ChatInput({ className }: ChatInputProps) {
       } catch (error) {
         console.error('Failed to create session:', error);
         alert('세션 생성에 실패했습니다.');
+        setIsSending(false); // 세션 생성 실패 시에도 리셋
         return;
       }
     }
@@ -320,11 +325,13 @@ export default function ChatInput({ className }: ChatInputProps) {
         isStreaming: false
       });
       setStreamingMessageId(null);
+    } finally {
+      setIsSending(false); // 전송 완료
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isSending) {
       e.preventDefault();
       handleSend();
     }
@@ -413,8 +420,8 @@ export default function ChatInput({ className }: ChatInputProps) {
               value={message}
               onChange={e => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={streamingMessageId ? "AI가 응답 중..." : "메시지를 입력하세요..."}
-              disabled={!!streamingMessageId}
+              placeholder={streamingMessageId ? "AI가 응답 중..." : isSending ? "메시지 전송 중..." : "메시지를 입력하세요..."}
+              disabled={!!streamingMessageId || isSending}
               className={cn(
                 "w-full px-4 py-3 pr-12 bg-muted rounded-lg resize-none outline-none",
                 "focus:ring-2 focus:ring-primary transition-all",
@@ -468,10 +475,10 @@ export default function ChatInput({ className }: ChatInputProps) {
             ) : (
               <button
                 onClick={handleSend}
-                disabled={!message.trim() && attachedFiles.length === 0}
+                disabled={(!message.trim() && attachedFiles.length === 0) || isSending}
                 className={cn(
                   "p-3 rounded-lg transition-colors",
-                  message.trim() || attachedFiles.length > 0
+                  (message.trim() || attachedFiles.length > 0) && !isSending
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 )}
