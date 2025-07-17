@@ -48,59 +48,73 @@ const MessageItem = memo(function MessageItem({
 
       {/* 내용 */}
       <div className="flex-1 min-w-0">
-        {/* 메시지 내용 */}
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex]}
-            components={{
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              code({ inline, className, children, ...props }: any) {
-                const match = /language-(\w+)/.exec(className || '');
-                
-                return !inline && match ? (
-                  <div className="relative group">
-                    <SyntaxHighlighter
-                      style={oneDark}
-                      language={match[1]}
-                      PreTag="div"
-                      className="!mt-0"
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(String(children));
-                      }}
-                      className="absolute top-2 right-2 p-1 bg-background/80 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <code className={className} {...props}>
-                    {children}
-                  </code>
-                );
-              },
-              // 테이블 스타일링
-              table({ children }) {
-                return (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">{children}</table>
-                  </div>
-                );
-              }
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
-        </div>
+        {/* 스트리밍 중이고 콘텐츠가 없을 때 애니메이션 표시 */}
+        {isStreaming && !message.content ? (
+          <div className="flex items-center gap-3 py-2">
+            <div className="flex gap-1.5">
+              <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+            <span className="text-sm text-muted-foreground animate-pulse">AI가 생각하는 중...</span>
+          </div>
+        ) : (
+          <>
+            {/* 메시지 내용 */}
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={{
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  code({ inline, className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    
+                    return !inline && match ? (
+                      <div className="relative group">
+                        <SyntaxHighlighter
+                          style={oneDark}
+                          language={match[1]}
+                          PreTag="div"
+                          className="!mt-0"
+                          {...props}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(String(children));
+                          }}
+                          className="absolute top-2 right-2 p-1 bg-background/80 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                  // 테이블 스타일링
+                  table({ children }) {
+                    return (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">{children}</table>
+                      </div>
+                    );
+                  }
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
 
-        {/* 스트리밍 인디케이터 */}
-        {isStreaming && (
-          <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
+            {/* 스트리밍 인디케이터 (콘텐츠가 있을 때) */}
+            {isStreaming && message.content && (
+              <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
+            )}
+          </>
         )}
 
         {/* 액션 버튼 */}

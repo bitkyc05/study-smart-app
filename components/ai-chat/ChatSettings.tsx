@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAIChatStore } from '@/store/useAIChatStore';
-import { X, ChevronDown, Settings, Key, Loader2 } from 'lucide-react';
+import { X, ChevronDown, Settings, Key, Loader2, Bot, Brain, Sparkles, Code2, Cog } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import APIKeyManager from './APIKeyManager';
@@ -17,29 +17,42 @@ type TabType = 'settings' | 'api-keys';
 const PROVIDER_OPTIONS = {
   openai: {
     name: 'OpenAI',
-    defaultModels: ['gpt-4-turbo-preview', 'gpt-4', 'gpt-3.5-turbo']
+    icon: Bot,
+    description: 'o3, GPT-4o, GPT-4 등',
+    defaultModels: ['o3-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo']
   },
   anthropic: {
     name: 'Anthropic',
+    icon: Brain,
+    description: 'Claude 3 시리즈',
     defaultModels: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307']
   },
   google: {
     name: 'Google',
-    defaultModels: ['gemini-pro', 'gemini-pro-vision']
+    icon: Sparkles,
+    description: 'Gemini 2.5, 2.0, Pro 시리즈',
+    defaultModels: ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-pro', 'gemini-pro-vision']
   },
   grok: {
     name: 'Grok',
+    icon: Code2,
+    description: 'X.AI의 Grok 모델',
     defaultModels: ['grok-1']
   },
   custom: {
     name: 'Custom',
+    icon: Cog,
+    description: '사용자 정의 모델',
     defaultModels: []
   }
 };
 
 export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: ChatSettingsProps) {
-  const { providerSettings, setProviderSettings } = useAIChatStore();
-  const [selectedProvider, setSelectedProvider] = useState<keyof typeof PROVIDER_OPTIONS>('openai');
+  const { providerSettings, setProviderSettings, activeSessionId, sessions, updateSession } = useAIChatStore();
+  const activeSession = sessions.find(s => s.id === activeSessionId);
+  const [selectedProvider, setSelectedProvider] = useState<keyof typeof PROVIDER_OPTIONS>(
+    (activeSession?.provider as keyof typeof PROVIDER_OPTIONS) || 'openai'
+  );
   const [activeTab, setActiveTab] = useState<TabType>('settings');
   const [userId, setUserId] = useState<string | null>(null);
   const [models, setModels] = useState<Record<string, string[]>>({});
@@ -93,23 +106,35 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
   const fetchModelsForProvider = async (provider: string) => {
     if (!userId) return;
     
+    console.log(`Fetching models for provider: ${provider}`);
     setLoadingModels(provider);
     try {
       const { data, error } = await supabase.functions.invoke('get-models', {
         body: { provider }
       });
 
+      console.log(`Models response for ${provider}:`, { data, error });
+
       if (!error && data?.models && data.models.length > 0) {
         setModels(prev => ({ ...prev, [provider]: data.models }));
+        console.log(`Set models for ${provider}:`, data.models);
         
         // If current model is empty or not in the list, set first model as default
         const currentModel = providerSettings[provider as keyof typeof PROVIDER_OPTIONS]?.model;
         if (!currentModel || !data.models.includes(currentModel)) {
           handleSettingChange('model', data.models[0]);
+          // Also update the active session if it's using this provider
+          if (activeSessionId && activeSession?.provider === provider) {
+            updateSession(activeSessionId, { 
+              provider: provider,
+              model: data.models[0]
+            });
+          }
         }
       } else {
         // Use default models if fetch fails
         const defaultModels = PROVIDER_OPTIONS[provider as keyof typeof PROVIDER_OPTIONS].defaultModels;
+        console.log(`Using default models for ${provider}:`, defaultModels);
         setModels(prev => ({ 
           ...prev, 
           [provider]: defaultModels 
@@ -119,6 +144,13 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
         const currentModel = providerSettings[provider as keyof typeof PROVIDER_OPTIONS]?.model;
         if (!currentModel && defaultModels.length > 0) {
           handleSettingChange('model', defaultModels[0]);
+          // Also update the active session if it's using this provider
+          if (activeSessionId && activeSession?.provider === provider) {
+            updateSession(activeSessionId, { 
+              provider: provider,
+              model: defaultModels[0]
+            });
+          }
         }
       }
     } catch (error) {
@@ -134,6 +166,13 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
       const currentModel = providerSettings[provider as keyof typeof PROVIDER_OPTIONS]?.model;
       if (!currentModel && defaultModels.length > 0) {
         handleSettingChange('model', defaultModels[0]);
+        // Also update the active session if it's using this provider
+        if (activeSessionId && activeSession?.provider === provider) {
+          updateSession(activeSessionId, { 
+            provider: provider,
+            model: defaultModels[0]
+          });
+        }
       }
     } finally {
       setLoadingModels(null);
@@ -152,13 +191,26 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
       ...currentSettings,
       [key]: value
     });
+    
+    // 현재 활성 세션도 업데이트
+    if (activeSessionId) {
+      const activeSession = sessions.find(s => s.id === activeSessionId);
+      if (activeSession) {
+        if (key === 'model') {
+          updateSession(activeSessionId, { 
+            provider: selectedProvider,
+            model: value as string 
+          });
+        }
+      }
+    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <div className="w-full max-w-3xl bg-card rounded-lg shadow-lg max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+      <div className="w-full max-w-3xl bg-background rounded-lg shadow-xl border border-border max-h-[90vh] overflow-hidden flex flex-col">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">AI 설정</h2>
@@ -210,22 +262,82 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
             <>
               {/* 프로바이더 선택 */}
               <div className="p-4 border-b">
-                <label className="block text-sm font-medium mb-2">AI 프로바이더</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {Object.entries(PROVIDER_OPTIONS).map(([key, provider]) => (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedProvider(key as keyof typeof PROVIDER_OPTIONS)}
-                      className={cn(
-                        "p-2 rounded-lg border transition-colors",
-                        selectedProvider === key
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "hover:bg-muted"
-                      )}
-                    >
-                      {provider.name}
-                    </button>
-                  ))}
+                <label className="block text-sm font-medium mb-3">AI 프로바이더</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(PROVIDER_OPTIONS).map(([key, provider]) => {
+                    const Icon = provider.icon;
+                    const isSelected = selectedProvider === key;
+                    const hasKey = hasApiKey[key as keyof typeof PROVIDER_OPTIONS];
+                    
+                    return (
+                      <button
+                        key={key}
+                        onClick={async () => {
+                          const newProvider = key as keyof typeof PROVIDER_OPTIONS;
+                          setSelectedProvider(newProvider);
+                          
+                          // 프로바이더 변경 시 모델 리스트 다시 가져오기
+                          if (hasApiKey[newProvider] && newProvider !== 'custom') {
+                            await fetchModelsForProvider(newProvider);
+                          }
+                          
+                          // 현재 세션의 프로바이더도 업데이트
+                          if (activeSessionId) {
+                            const providerModels = models[newProvider] || PROVIDER_OPTIONS[newProvider].defaultModels;
+                            const firstModel = providerModels[0] || '';
+                            
+                            updateSession(activeSessionId, { 
+                              provider: newProvider,
+                              model: firstModel
+                            });
+                            
+                            // providerSettings도 업데이트
+                            setProviderSettings(newProvider, {
+                              ...providerSettings[newProvider],
+                              model: firstModel
+                            });
+                          }
+                        }}
+                        className={cn(
+                          "p-4 rounded-lg border-2 transition-all text-left group",
+                          "hover:shadow-md hover:border-primary/50",
+                          isSelected
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-card"
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={cn(
+                            "p-2 rounded-lg",
+                            isSelected ? "bg-primary/20" : "bg-muted"
+                          )}>
+                            <Icon className={cn(
+                              "w-5 h-5",
+                              isSelected ? "text-primary" : "text-muted-foreground"
+                            )} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className={cn(
+                                "font-medium",
+                                isSelected && "text-primary"
+                              )}>
+                                {provider.name}
+                              </h3>
+                              {hasKey && (
+                                <span className="text-xs text-green-600 dark:text-green-400">
+                                  ✓ API Key
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {provider.description}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -259,22 +371,21 @@ export default function ChatSettings({ isOpen, onClose, refreshTrigger = 0 }: Ch
                     <option value="">모델 목록 불러오는 중...</option>
                   ) : (
                     <>
+                      {!currentSettings.model && (
+                        <option value="">모델을 선택하세요</option>
+                      )}
                       {/* Always show current model even if not in list */}
                       {currentSettings.model && !models[selectedProvider]?.includes(currentSettings.model) && !PROVIDER_OPTIONS[selectedProvider].defaultModels.includes(currentSettings.model) && (
                         <option key={currentSettings.model} value={currentSettings.model}>
                           {currentSettings.model} (current)
                         </option>
                       )}
-                      {/* Show fetched models or default models */}
-                      {models[selectedProvider]?.length > 0 ? (
+                      {/* Show fetched models if available */}
+                      {models[selectedProvider]?.length > 0 && 
                         models[selectedProvider].map(model => (
                           <option key={model} value={model}>{model}</option>
                         ))
-                      ) : (
-                        PROVIDER_OPTIONS[selectedProvider].defaultModels.map(model => (
-                          <option key={model} value={model}>{model}</option>
-                        ))
-                      )}
+                      }
                     </>
                   )}
                 </select>

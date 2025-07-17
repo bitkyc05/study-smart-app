@@ -96,11 +96,16 @@ export const useAIChatStore = create<AIChatState>()(
         uploadedFiles: { ...state.uploadedFiles, [session.id]: [] },
       })),
       
-      updateSession: (sessionId, updates) => set((state) => ({
-        sessions: state.sessions.map((s) =>
+      updateSession: (sessionId, updates) => set((state) => {
+        console.log('[Store] Updating session:', { sessionId, updates });
+        const updatedSessions = state.sessions.map((s) =>
           s.id === sessionId ? { ...s, ...updates } : s
-        ),
-      })),
+        );
+        console.log('[Store] Updated sessions:', updatedSessions);
+        return {
+          sessions: updatedSessions,
+        };
+      }),
       
       deleteSession: (sessionId) => set((state) => {
         const { [sessionId]: _, ...restMessages } = state.messages;

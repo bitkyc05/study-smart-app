@@ -1,16 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAIChatStore } from '@/store/useAIChatStore';
 import ChatLayout from '@/components/ai-chat/ChatLayout';
-import ChatSidebar from '@/components/ai-chat/ChatSidebar';
+import SessionManager from '@/components/ai-chat/SessionManager';
 import ChatMain from '@/components/ai-chat/ChatMain';
 import ChatSettings from '@/components/ai-chat/ChatSettings';
 import { useHotkeys } from '@/hooks/useHotkeys';
+import { createClient } from '@/lib/supabase/client';
 
 export default function AIChatPage() {
   const [showSettings, setShowSettings] = useState(false);
-  const { isSidebarOpen, setSidebarOpen } = useAIChatStore();
+  const [userId, setUserId] = useState<string | null>(null);
+  const { isSidebarOpen, setSidebarOpen, setActiveSession } = useAIChatStore();
+  const supabase = createClient();
+  
+  // 사용자 ID 가져오기
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    getUser();
+  }, [supabase]);
   
   // 키보드 단축키
   useHotkeys([
@@ -31,11 +45,17 @@ export default function AIChatPage() {
             />
           </div>
           
-          {/* 사이드바 - 세션 목록 (오른쪽) */}
-          <ChatSidebar 
-            isOpen={isSidebarOpen}
-            onToggle={() => setSidebarOpen(!isSidebarOpen)}
-          />
+          {/* 사이드바 - 세션 관리 (오른쪽) */}
+          {userId && (
+            <SessionManager
+              userId={userId}
+              mode="sidebar"
+              isOpen={isSidebarOpen}
+              onSessionSelect={(sessionId) => {
+                setActiveSession(sessionId);
+              }}
+            />
+          )}
           
           {/* 토글 버튼 */}
           {isSidebarOpen && (

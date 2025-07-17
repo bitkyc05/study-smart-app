@@ -55,32 +55,274 @@ export type Database = {
       ai_chat_sessions: {
         Row: {
           created_at: string
+          folder_id: string | null
           id: string
           is_archived: boolean
+          language: string | null
+          last_message_at: string | null
+          message_count: number | null
           metadata: Json | null
           provider_settings: Json
+          search_vector: unknown | null
+          summary: string | null
           title: string
+          total_tokens: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          folder_id?: string | null
           id?: string
           is_archived?: boolean
+          language?: string | null
+          last_message_at?: string | null
+          message_count?: number | null
           metadata?: Json | null
           provider_settings?: Json
+          search_vector?: unknown | null
+          summary?: string | null
           title: string
+          total_tokens?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          folder_id?: string | null
           id?: string
           is_archived?: boolean
+          language?: string | null
+          last_message_at?: string | null
+          message_count?: number | null
           metadata?: Json | null
           provider_settings?: Json
+          search_vector?: unknown | null
+          summary?: string | null
           title?: string
+          total_tokens?: number | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_sessions_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "chat_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_key_access_log: {
+        Row: {
+          access_type: string
+          accessed_at: string
+          error_message: string | null
+          id: string
+          ip_address: unknown | null
+          key_id: string | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          access_type: string
+          accessed_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown | null
+          key_id?: string | null
+          success: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          access_type?: string
+          accessed_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown | null
+          key_id?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_access_log_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_key_metadata"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_key_metadata: {
+        Row: {
+          created_at: string
+          custom_url: string | null
+          encrypted_hint: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_id: string
+          last_used_at: string | null
+          metadata: Json | null
+          provider: string
+          usage_count: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_url?: string | null
+          encrypted_hint?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_id: string
+          last_used_at?: string | null
+          metadata?: Json | null
+          provider: string
+          usage_count?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_url?: string | null
+          encrypted_hint?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_id?: string
+          last_used_at?: string | null
+          metadata?: Json | null
+          provider?: string
+          usage_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chat_favorites: {
+        Row: {
+          created_at: string
+          position: number | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          position?: number | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          position?: number | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_favorites_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          position: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          position?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          position?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chat_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_session_tags: {
+        Row: {
+          session_id: string
+          tag_id: string
+        }
+        Insert: {
+          session_id: string
+          tag_id: string
+        }
+        Update: {
+          session_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_session_tags_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_session_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "chat_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
           user_id?: string
         }
         Relationships: []
@@ -276,6 +518,50 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      shared_chat_sessions: {
+        Row: {
+          accessed_count: number | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          permissions: string[] | null
+          session_id: string
+          share_token: string | null
+          shared_by: string
+          shared_with: string | null
+        }
+        Insert: {
+          accessed_count?: number | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          permissions?: string[] | null
+          session_id: string
+          share_token?: string | null
+          shared_by: string
+          shared_with?: string | null
+        }
+        Update: {
+          accessed_count?: number | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          permissions?: string[] | null
+          session_id?: string
+          share_token?: string | null
+          shared_by?: string
+          shared_with?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_chat_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       study_sessions: {
         Row: {
@@ -518,92 +804,6 @@ export type Database = {
         }
         Relationships: []
       }
-      api_key_metadata: {
-        Row: {
-          id: string
-          user_id: string
-          provider: string
-          key_id: string
-          encrypted_hint: string | null
-          is_active: boolean
-          created_at: string
-          last_used_at: string | null
-          expires_at: string | null
-          usage_count: number
-          custom_url: string | null
-          metadata: Json
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          provider: string
-          key_id: string
-          encrypted_hint?: string | null
-          is_active?: boolean
-          created_at?: string
-          last_used_at?: string | null
-          expires_at?: string | null
-          usage_count?: number
-          custom_url?: string | null
-          metadata?: Json
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          provider?: string
-          key_id?: string
-          encrypted_hint?: string | null
-          is_active?: boolean
-          created_at?: string
-          last_used_at?: string | null
-          expires_at?: string | null
-          usage_count?: number
-          custom_url?: string | null
-          metadata?: Json
-        }
-        Relationships: []
-      }
-      api_key_access_log: {
-        Row: {
-          id: string
-          key_id: string | null
-          accessed_at: string
-          access_type: string
-          ip_address: string | null
-          user_agent: string | null
-          success: boolean
-          error_message: string | null
-        }
-        Insert: {
-          id?: string
-          key_id?: string | null
-          accessed_at?: string
-          access_type: string
-          ip_address?: string | null
-          user_agent?: string | null
-          success: boolean
-          error_message?: string | null
-        }
-        Update: {
-          id?: string
-          key_id?: string | null
-          accessed_at?: string
-          access_type?: string
-          ip_address?: string | null
-          user_agent?: string | null
-          success?: boolean
-          error_message?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "api_key_access_log_key_id_fkey"
-            columns: ["key_id"]
-            isOneToOne: false
-            referencedRelation: "api_key_metadata"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -638,8 +838,16 @@ export type Database = {
         }
         Returns: string
       }
+      delete_api_key: {
+        Args: { p_user_id: string; p_provider: string }
+        Returns: boolean
+      }
       encrypt_api_key: {
         Args: { p_api_key: string; p_user_id: string }
+        Returns: string
+      }
+      get_api_key_simple: {
+        Args: { p_user_id: string; p_provider: string }
         Returns: string
       }
       get_daily_study_summary: {
@@ -669,6 +877,10 @@ export type Database = {
           total_minutes: number
           session_count: number
         }[]
+      }
+      get_key_hint_simple: {
+        Args: { p_user_id: string; p_provider: string }
+        Returns: string
       }
       get_learning_pattern_analysis: {
         Args: { p_user_id: string }
@@ -772,6 +984,10 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      increment_key_usage: {
+        Args: { p_key_id: string }
+        Returns: undefined
+      }
       ivfflat_bit_support: {
         Args: { "": unknown }
         Returns: unknown
@@ -803,6 +1019,15 @@ export type Database = {
       sparsevec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      store_api_key_simple: {
+        Args: {
+          p_user_id: string
+          p_provider: string
+          p_api_key: string
+          p_custom_url?: string
+        }
+        Returns: string
       }
       update_token_usage: {
         Args: {
@@ -845,42 +1070,6 @@ export type Database = {
       vector_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
-      }
-      store_api_key: {
-        Args: {
-          p_user_id: string
-          p_provider: string
-          p_api_key: string
-          p_custom_url?: string | null
-        }
-        Returns: string
-      }
-      get_decrypted_api_key: {
-        Args: {
-          p_user_id: string
-          p_provider: string
-        }
-        Returns: string | null
-      }
-      decrypt_key_hint: {
-        Args: {
-          p_user_id: string
-          p_encrypted_hint: string
-        }
-        Returns: string | null
-      }
-      delete_api_key: {
-        Args: {
-          p_user_id: string
-          p_provider: string
-        }
-        Returns: boolean
-      }
-      increment_key_usage: {
-        Args: {
-          p_key_id: string
-        }
-        Returns: void
       }
     }
     Enums: {

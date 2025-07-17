@@ -49,6 +49,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
+      console.error('Auth error:', authError)
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { 
@@ -58,17 +59,47 @@ serve(async (req) => {
       )
     }
 
+    console.log('User authenticated:', user.id)
+
     // Parse request body
     const body: ChatRequest = await req.json()
     const { messages, provider, model, temperature, maxTokens, stream } = body
 
+    console.log('Request details:', { provider, model, userId: user.id })
+
+    // Handle model name mappings
+    let actualModel = model
+    if (provider === 'openai') {
+      if (model === 'o4-mini') {
+        actualModel = 'gpt-4o-mini'
+        console.log('Mapping o4-mini to gpt-4o-mini')
+      } else if (model === 'o3-mini') {
+        actualModel = 'gpt-4o-mini' // o3-mini doesn't exist yet, use gpt-4o-mini
+        console.log('Mapping o3-mini to gpt-4o-mini')
+      }
+    }
+
     // Get API key from vault
-    const { data: apiKey, error: keyError } = await supabase.rpc('get_decrypted_api_key', {
+    const { data: apiKey, error: keyError } = await supabase.rpc('get_api_key_simple', {
       p_user_id: user.id,
       p_provider: provider
     })
 
-    if (keyError || !apiKey) {
+    if (keyError) {
+      console.error('RPC error:', keyError)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to retrieve API key',
+          details: keyError.message 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    if (!apiKey) {
       return new Response(
         JSON.stringify({ error: 'API key not found or inactive' }),
         { 
@@ -93,30 +124,37 @@ serve(async (req) => {
 
     // Call the appropriate AI provider
     let response: Response
-    switch (provider) {
-      case 'openai':
-        response = await callOpenAI(apiKey, messages, model, temperature, maxTokens, stream)
-        break
-      case 'anthropic':
-        response = await callAnthropic(apiKey, messages, model, temperature, maxTokens, stream)
-        break
-      case 'google':
-        response = await callGoogle(apiKey, messages, model, temperature, maxTokens, stream)
-        break
-      case 'grok':
-        response = await callGrok(apiKey, messages, model, temperature, maxTokens, stream)
-        break
-      case 'custom':
-        response = await callCustom(apiKey, messages, model, temperature, maxTokens, stream, customUrl)
-        break
-      default:
-        return new Response(
-          JSON.stringify({ error: 'Unknown provider' }),
-          { 
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
+    console.log('About to call AI provider:', provider, 'with model:', model)
+    
+    try {
+      switch (provider) {
+        case 'openai':
+          response = await callOpenAI(apiKey, messages, model, temperature, maxTokens, stream)
+          break
+        case 'anthropic':
+          response = await callAnthropic(apiKey, messages, model, temperature, maxTokens, stream)
+          break
+        case 'google':
+          response = await callGoogle(apiKey, messages, model, temperature, maxTokens, stream)
+          break
+        case 'grok':
+          response = await callGrok(apiKey, messages, model, temperature, maxTokens, stream)
+          break
+        case 'custom':
+          response = await callCustom(apiKey, messages, model, temperature, maxTokens, stream, customUrl)
+          break
+        default:
+          return new Response(
+            JSON.stringify({ error: 'Unknown provider' }),
+            { 
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          )
+      }
+    } catch (providerError) {
+      console.error('Provider call error:', providerError)
+      throw providerError
     }
 
     // Return the AI response with CORS headers
@@ -151,6 +189,8 @@ async function callOpenAI(
   maxTokens = 4096,
   stream = false
 ): Promise<Response> {
+  console.log('Calling OpenAI with model:', model)
+  
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -165,6 +205,11 @@ async function callOpenAI(
       stream
     })
   })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('OpenAI API error:', response.status, errorText)
+  }
 
   return response
 }
@@ -213,11 +258,24 @@ async function callGoogle(
   maxTokens = 4096,
   stream = false
 ): Promise<Response> {
+  console.log('Calling Google Gemini with model:', model)
+  console.log('API Key loaded:', !!apiKey)
+  
   // Convert messages to Google format
   const contents = messages.filter(m => m.role !== 'system').map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }]
   }))
+
+  const requestBody = {
+    contents,
+    generationConfig: {
+      temperature,
+      maxOutputTokens: maxTokens,
+    }
+  }
+
+  console.log('Request to Gemini:', JSON.stringify(requestBody, null, 2))
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -226,15 +284,31 @@ async function callGoogle(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature,
-          maxOutputTokens: maxTokens,
-        }
-      })
+      body: JSON.stringify(requestBody)
     }
   )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Google Gemini API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText
+    })
+    
+    // Create a proper error response with details
+    return new Response(
+      JSON.stringify({ 
+        error: 'Google Gemini API error',
+        details: errorText,
+        status: response.status
+      }),
+      {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
+  }
 
   return response
 }

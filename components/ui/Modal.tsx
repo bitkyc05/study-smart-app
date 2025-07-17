@@ -43,7 +43,7 @@ export function Modal({ isOpen, onClose, title, children, className = '' }: Moda
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-in fade-in duration-300">
       <div
         ref={modalRef}
         className={`relative w-full max-w-lg mx-4 bg-white dark:bg-gray-900 rounded-xl shadow-xl animate-in zoom-in-95 duration-300 ${className}`}
