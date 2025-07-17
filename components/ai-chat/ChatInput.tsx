@@ -3,10 +3,11 @@ import { useAIChatStore } from '@/store/useAIChatStore';
 import { Send, Paperclip, Mic, Square, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHotkeys } from '@/hooks/useHotkeys';
-import type { ProcessedFile, SpeechRecognitionEvent } from '@/types/ai-chat.types';
+import type { SpeechRecognitionEvent } from '@/types/ai-chat.types'; // ProcessedFile는 파일 첨부 기능 이후 사용 예정
 import { ChatSessionService } from '@/lib/services/chat-session-service';
 import { APIKeyService } from '@/lib/services/api-key-service';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 interface ChatInputProps {
   className?: string;
@@ -14,9 +15,9 @@ interface ChatInputProps {
 
 export default function ChatInput({ className }: ChatInputProps) {
   const [message, setMessage] = useState('');
-  const [showFileUpload, setShowFileUpload] = useState(false);
+  // const [showFileUpload, setShowFileUpload] = useState(false); // 파일 첨부 기능 이후 구현 예정
   const [isRecording, setIsRecording] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<ProcessedFile[]>([]);
+  // const [attachedFiles, setAttachedFiles] = useState<ProcessedFile[]>([]); // 파일 첨부 기능 이후 구현 예정
   const [isSending, setIsSending] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -66,7 +67,7 @@ export default function ChatInput({ className }: ChatInputProps) {
 
   const handleSend = async () => {
     if (isSending) return; // 이미 전송 중이면 무시
-    if (!message.trim() && attachedFiles.length === 0) return;
+    if (!message.trim()) return; // && attachedFiles.length === 0) return; // 파일 첨부 기능 이후 구현 예정
     if (streamingMessageId) return;
 
     // 로그인 확인
@@ -130,13 +131,13 @@ export default function ChatInput({ className }: ChatInputProps) {
       content: message,
       createdAt: new Date(),
       metadata: {
-        fileContexts: attachedFiles.map(f => f.id)
+        // fileContexts: attachedFiles.map(f => f.id) // 파일 첨부 기능 이후 구현 예정
       }
     };
     
     addMessage(sessionId, userMessage);
     setMessage('');
-    setAttachedFiles([]);
+    // setAttachedFiles([]); // 파일 첨부 기능 이후 구현 예정
     textareaRef.current?.focus();
     
     // 데이터베이스에 메시지 저장
@@ -146,7 +147,9 @@ export default function ChatInput({ className }: ChatInputProps) {
         user_id: userId,
         role: 'user',
         content: message,
-        metadata: { fileContexts: attachedFiles.map(f => f.id) }
+        metadata: { 
+          // fileContexts: attachedFiles.map(f => f.id) // 파일 첨부 기능 이후 구현 예정
+        }
       });
     } catch (error) {
       console.error('Failed to save message to database:', error);
@@ -339,9 +342,10 @@ export default function ChatInput({ className }: ChatInputProps) {
 
   // File handling functions will be implemented when FileUpload component is ready
 
-  const removeFile = (index: number) => {
-    setAttachedFiles(files => files.filter((_, i) => i !== index));
-  };
+  // 파일 첨부 기능 이후 구현 예정
+  // const removeFile = (index: number) => {
+  //   setAttachedFiles(files => files.filter((_, i) => i !== index));
+  // };
 
   // 음성 녹음 (Web Speech API)
   const toggleRecording = () => {
@@ -389,8 +393,8 @@ export default function ChatInput({ className }: ChatInputProps) {
 
   return (
     <div className={cn("border-t bg-card", className)}>
-      {/* 첨부파일 표시 */}
-      {attachedFiles.length > 0 && (
+      {/* 첨부파일 표시 - 파일 첨부 기능 이후 구현 예정 */}
+      {/* {attachedFiles.length > 0 && (
         <div className="px-4 pt-3 flex flex-wrap gap-2">
           {attachedFiles.map((file, index) => (
             <div
@@ -407,7 +411,7 @@ export default function ChatInput({ className }: ChatInputProps) {
             </div>
           ))}
         </div>
-      )}
+      )} */}
 
       {/* 입력 영역 */}
       <div className="p-4">
@@ -444,9 +448,15 @@ export default function ChatInput({ className }: ChatInputProps) {
           <div className="flex items-center gap-1">
             {/* 파일 첨부 */}
             <button
-              onClick={() => setShowFileUpload(!showFileUpload)}
+              onClick={() => {
+                // 임시로 "이후 구현 예정" 메시지 표시
+                toast.info('파일 첨부 기능은 이후 구현 예정입니다.');
+                
+                // 원래 코드 (주석 처리)
+                // setShowFileUpload(!showFileUpload)
+              }}
               className="p-3 hover:bg-muted rounded-lg transition-colors"
-              title="파일 첨부"
+              title="파일 첨부 (이후 구현 예정)"
             >
               <Paperclip className="w-5 h-5" />
             </button>
@@ -475,10 +485,10 @@ export default function ChatInput({ className }: ChatInputProps) {
             ) : (
               <button
                 onClick={handleSend}
-                disabled={(!message.trim() && attachedFiles.length === 0) || isSending}
+                disabled={!message.trim() || isSending} // && attachedFiles.length === 0) || isSending} // 파일 첨부 기능 이후 구현 예정
                 className={cn(
                   "p-3 rounded-lg transition-colors",
-                  (message.trim() || attachedFiles.length > 0) && !isSending
+                  message.trim() && !isSending // || attachedFiles.length > 0) && !isSending // 파일 첨부 기능 이후 구현 예정
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 )}
@@ -490,15 +500,14 @@ export default function ChatInput({ className }: ChatInputProps) {
           </div>
         </div>
 
-        {/* 파일 업로드 팝업 */}
-        {showFileUpload && (
+        {/* 파일 업로드 팝업 - 이후 구현 예정 */}
+        {/* {showFileUpload && (
           <div className="absolute bottom-full left-0 right-0 mb-2 p-4 bg-card border rounded-lg shadow-lg">
-            {/* FileUpload 컴포넌트가 이미 있으므로 사용 */}
             <div className="text-center">
               <p className="text-sm text-muted-foreground">파일 업로드 기능은 곧 구현될 예정입니다.</p>
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );
