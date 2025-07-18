@@ -8,7 +8,6 @@ import ChatMain from '@/components/ai-chat/ChatMain';
 import ChatSettings from '@/components/ai-chat/ChatSettings';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { createClient } from '@/lib/supabase/client';
-import { cn } from '@/lib/utils';
 
 export default function AIChatPage() {
   const [showSettings, setShowSettings] = useState(false);
@@ -72,19 +71,6 @@ export default function AIChatPage() {
               }}
             />
           )}
-          
-          {/* 토글 버튼 */}
-          <button
-            onClick={() => setSidebarOpen(!isSidebarOpen)}
-            className={cn(
-              "fixed lg:absolute top-20 bg-background border border-accent rounded-full p-1 shadow-sm hover:bg-accent-light transition-all z-[60]",
-              isSidebarOpen ? "right-2 lg:right-80 lg:-translate-x-3" : "right-2 lg:right-4"
-            )}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isSidebarOpen ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
-            </svg>
-          </button>
           
           {/* 설정 패널 */}
           <ChatSettings 

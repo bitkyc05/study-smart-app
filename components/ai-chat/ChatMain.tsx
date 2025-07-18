@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { APIKeyService } from '@/lib/services/api-key-service';
+import type { ChatMessage } from '@/types/ai-chat.types';
 
 interface ChatMainProps {
   onSettingsClick: () => void;
@@ -47,7 +48,7 @@ export default function ChatMain({ onSettingsClick, className }: ChatMainProps) 
 
 // 현재 세션 정보
 function CurrentSessionInfo() {
-  const { sessions, activeSessionId, providerSettings, updateSession, setProviderSettings } = useAIChatStore();
+  const { sessions, activeSessionId, providerSettings, updateSession, setProviderSettings, messages, addMessage, setLoading } = useAIChatStore();
   const currentSession = sessions.find(s => s.id === activeSessionId);
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const [models, setModels] = useState<Record<string, string[]>>({});
@@ -79,6 +80,48 @@ function CurrentSessionInfo() {
     };
     fetchUser();
   }, []);
+
+  // activeSessionId가 변경될 때 메시지 로드
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!activeSessionId) return;
+      
+      // 이미 메시지가 로드되어 있으면 스킵
+      const existingMessages = messages[activeSessionId];
+      if (existingMessages && existingMessages.length > 0) return;
+      
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('ai_chat_messages')
+          .select('*')
+          .eq('session_id', activeSessionId)
+          .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          // 메시지를 store에 추가
+          data.forEach(msg => {
+            const message: ChatMessage = {
+              id: msg.id,
+              role: msg.role as 'user' | 'assistant' | 'system',
+              content: msg.content,
+              createdAt: new Date(msg.created_at),
+              metadata: msg.metadata as ChatMessage['metadata']
+            };
+            addMessage(activeSessionId, message);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load messages:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadMessages();
+  }, [activeSessionId, messages, addMessage, setLoading, supabase]);
 
   useEffect(() => {
     if (!userId) return;

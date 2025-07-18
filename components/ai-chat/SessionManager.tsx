@@ -22,6 +22,7 @@ import {
   Plus,
   FolderOpen,
   X,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
   FileJson,
@@ -890,14 +891,31 @@ export default function SessionManager({
         <aside 
           className={cn(
             "flex flex-col bg-accent/20 border-l-2 border-accent shadow-md transition-all duration-300",
-            "fixed lg:relative right-0 top-0 h-full lg:h-auto z-50",
+            "fixed lg:relative right-0 top-0 h-full lg:h-auto z-[90]",
             isOpen 
               ? "w-full sm:w-80" 
-              : "w-2 lg:w-0 overflow-hidden" // 모바일에서는 w-2로 border 표시
+              : "w-2" // 접힌 상태에서는 border만 표시
           )}
         >
-        {isOpen && (
-          <>
+          {/* 토글 버튼 - 사이드바 밖에 위치 */}
+          <button
+            onClick={() => {
+              if (useAIChatStore.getState().setSidebarOpen) {
+                useAIChatStore.getState().setSidebarOpen(!isOpen);
+              }
+            }}
+            className="absolute -left-3 top-24 lg:top-6 bg-background border border-accent rounded-full p-1 shadow-sm hover:bg-accent-light transition-colors z-[100]"
+          >
+            {isOpen ? (
+              <ChevronRight className="h-4 w-4 text-text-secondary" />
+            ) : (
+              <ChevronLeft className="h-4 w-4 text-text-secondary" />
+            )}
+          </button>
+
+          {/* 내용은 열린 상태에서만 표시 */}
+          {isOpen && (
+            <>
             {/* 헤더 */}
             <div className="flex-none p-4 border-b border-accent bg-background/50 relative">
               {/* 모바일 닫기 버튼 */}
