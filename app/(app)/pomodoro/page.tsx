@@ -36,6 +36,17 @@ export default function PomodoroPage() {
   useEffect(() => {
     fetchSubjects()
     fetchTodaySessions()
+    
+    // 세션 업데이트 이벤트 리스너 추가
+    const handleSessionUpdate = () => {
+      fetchTodaySessions()
+    }
+    
+    window.addEventListener('session-updated', handleSessionUpdate)
+    
+    return () => {
+      window.removeEventListener('session-updated', handleSessionUpdate)
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSubjects = async () => {

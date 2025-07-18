@@ -50,30 +50,82 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         const { state, workerRef, settings } = get()
         if (state !== 'idle') return
         
-        // 세션 생성을 제거하고 시작 시간만 저장
-        const startTime = Date.now()
+        // 세션 생성 - 타이머 시작 시 즉시 생성
+        const startTime = new Date()
         
-        const initialAngle = (settings.studyDuration / 3600) * 360 // 60분 기준으로 각도 계산
-        
-        set({
-          state: 'countdown',
-          sessionType: 'study',
-          subjectId,
-          settingDuration: settings.studyDuration,
-          timeRemaining: settings.studyDuration,
-          overtimeElapsed: 0,
-          dialAngle: initialAngle, // 25분이면 150도
-          dialDirection: 'ccw',
-          completedRings: 0,
-          currentRingAngle: initialAngle,
-          sessionStartTime: startTime // 시작 시간 저장
-        })
-        
-        workerRef?.postMessage({
-          command: 'start',
-          duration: settings.studyDuration,
-          sessionType: 'study'
-        })
+        try {
+          const response = await fetchWithOfflineSupport('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subjectId,
+              sessionType: 'study',
+              status: 'in_progress',
+              settingDuration: settings.studyDuration,
+              startedAt: startTime.toISOString()
+            }),
+            offlineQueueType: 'session'
+          })
+
+          let sessionId = null
+          if (response && response.ok) {
+            const { data } = await response.json()
+            sessionId = data.id
+          } else if (!response) {
+            // 오프라인 큐에 추가됨 - 임시 ID 생성
+            sessionId = `offline-${Date.now()}`
+            console.log('Study session creation queued for offline sync')
+          } else {
+            console.error('Failed to create study session')
+          }
+          
+          const initialAngle = (settings.studyDuration / 3600) * 360
+          
+          set({
+            state: 'countdown',
+            sessionType: 'study',
+            subjectId,
+            currentSessionId: sessionId,
+            settingDuration: settings.studyDuration,
+            timeRemaining: settings.studyDuration,
+            overtimeElapsed: 0,
+            dialAngle: initialAngle,
+            dialDirection: 'ccw',
+            completedRings: 0,
+            currentRingAngle: initialAngle,
+            sessionStartTime: startTime.getTime()
+          })
+          
+          workerRef?.postMessage({
+            command: 'start',
+            duration: settings.studyDuration,
+            sessionType: 'study'
+          })
+        } catch (error) {
+          console.error('Error creating study session:', error)
+          // 세션 생성 실패해도 타이머는 시작
+          const initialAngle = (settings.studyDuration / 3600) * 360
+          
+          set({
+            state: 'countdown',
+            sessionType: 'study',
+            subjectId,
+            settingDuration: settings.studyDuration,
+            timeRemaining: settings.studyDuration,
+            overtimeElapsed: 0,
+            dialAngle: initialAngle,
+            dialDirection: 'ccw',
+            completedRings: 0,
+            currentRingAngle: initialAngle,
+            sessionStartTime: startTime.getTime()
+          })
+          
+          workerRef?.postMessage({
+            command: 'start',
+            duration: settings.studyDuration,
+            sessionType: 'study'
+          })
+        }
       },
 
       startBreak: async () => {
@@ -149,7 +201,7 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
       },
       
       reset: async () => {
-        const { workerRef, settings, sessionType, state } = get()
+        const { workerRef, settings, sessionType, state, currentSessionId, timeRemaining, settingDuration } = get()
         
         // 작동 중인 상태에서만 reset 가능
         if (state === 'idle') return
@@ -157,8 +209,30 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         // Worker에 즉시 reset 명령 전송
         workerRef?.postMessage({ command: 'reset' })
         
-        // 세션 생성 전이므로 아무 처리도 하지 않음
-        // 설정시간 전에 종료하면 세션이 기록되지 않음
+        // 진행 중인 세션이 있으면 interrupted 상태로 업데이트
+        if (currentSessionId && sessionType === 'study') {
+          try {
+            const elapsedTime = settingDuration - timeRemaining
+            if (elapsedTime > 0) { // 최소 1초 이상 진행된 경우만 기록
+              await fetchWithOfflineSupport('/api/sessions', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sessionId: currentSessionId,
+                  status: 'interrupted',
+                  actualDuration: elapsedTime,
+                  endedAt: new Date().toISOString()
+                }),
+                offlineQueueType: 'session'
+              })
+              
+              // 세션 목록 새로고침을 위한 이벤트 발행
+              window.dispatchEvent(new Event('session-updated'))
+            }
+          } catch (error) {
+            console.error('Error updating interrupted session:', error)
+          }
+        }
         
         // 학습 세션 중단 시 자동으로 휴식 시작 옵션 확인
         const shouldAutoStartBreak = sessionType === 'study' && 
@@ -187,7 +261,7 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
       },
       
       stop: async () => {
-        const { state, sessionType, overtimeElapsed, settingDuration, currentSessionId, workerRef, timeRemaining } = get()
+        const { state, sessionType, overtimeElapsed, settingDuration, currentSessionId, workerRef, timeRemaining, sessionStartTime } = get()
         
         // 작동 중인 상태에서만 stop 가능 (idle 상태 제외)
         if (state === 'idle') return
@@ -201,8 +275,9 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
           : settingDuration + overtimeElapsed
         
         // 현재 세션 업데이트
-        if (currentSessionId && (typeof currentSessionId === 'number' || !currentSessionId.startsWith('offline-'))) {
+        if (currentSessionId && sessionType === 'study') {
           try {
+            const endTime = new Date()
             const response = await fetchWithOfflineSupport('/api/sessions', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
@@ -210,7 +285,8 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
                 sessionId: currentSessionId,
                 status: 'completed',
                 actualDuration: totalDuration,
-                overtimeDuration: overtimeElapsed
+                overtimeDuration: overtimeElapsed,
+                endedAt: endTime.toISOString()
               }),
               offlineQueueType: 'session'
             })
@@ -223,6 +299,9 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
                   icon: '/favicon.ico'
                 })
               }
+              
+              // 세션 목록 새로고침을 위한 이벤트 발행
+              window.dispatchEvent(new Event('session-updated'))
             } else if (!response) {
               // 오프라인 큐에 추가됨
               console.log('Session completion queued for offline sync')
@@ -288,41 +367,6 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
             break
             
           case 'overtime_started':
-            const currentState = get()
-            
-            // 학습 세션인 경우에만 세션을 생성
-            if (currentState.sessionType === 'study' && currentState.sessionStartTime) {
-              const duration = currentState.settingDuration
-              const startedAt = new Date(currentState.sessionStartTime).toISOString()
-              
-              // 세션 생성
-              fetchWithOfflineSupport('/api/sessions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  subjectId: currentState.subjectId,
-                  sessionType: 'study',
-                  duration,
-                  settingDuration: duration,
-                  startedAt,
-                  status: 'completed'
-                }),
-                offlineQueueType: 'session'
-              }).then(async (response) => {
-                if (response && response.ok) {
-                  const { data } = await response.json()
-                  set({ currentSessionId: data.id })
-                } else if (!response) {
-                  // 오프라인 큐에 추가됨
-                  const tempId = `offline-${Date.now()}`
-                  set({ currentSessionId: tempId })
-                  console.log('Session creation queued for offline sync')
-                }
-              }).catch(error => {
-                console.error('Error creating session:', error)
-              })
-            }
-            
             set({ 
               state: get().sessionType === 'study' ? 'overtime' : 'breakOvertime'
             })

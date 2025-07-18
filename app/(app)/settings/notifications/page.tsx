@@ -220,23 +220,24 @@ export default function NotificationsSettingsPage() {
                 <h4 className="text-sm font-medium text-text-primary">Notification Sound</h4>
                 <div className="grid grid-cols-2 gap-3">
                   {NOTIFICATION_SOUNDS.map((sound) => (
-                    <button
+                    <div
                       key={sound.value}
-                      onClick={() => updateSetting('soundType', sound.value)}
                       className={`p-3 text-sm rounded-lg border transition-all flex items-center justify-between ${
                         localSettings.soundType === sound.value
                           ? 'bg-accent-primary text-white border-accent-primary'
                           : 'bg-white text-text-primary border-gray-200 hover:border-accent-primary hover:bg-accent-light'
                       }`}
                     >
-                      <span>{sound.label}</span>
+                      <button
+                        onClick={() => updateSetting('soundType', sound.value)}
+                        className="flex-1 text-left"
+                      >
+                        {sound.label}
+                      </button>
                       {sound.file && (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            playTestSound(sound.file)
-                          }}
-                          className="ml-2 p-1 rounded"
+                          onClick={() => playTestSound(sound.file)}
+                          className="ml-2 p-1 rounded hover:bg-black/10"
                         >
                           <SpeakerWaveIcon className="w-4 h-4" />
                         </button>
@@ -244,7 +245,7 @@ export default function NotificationsSettingsPage() {
                       {!sound.file && (
                         <SpeakerXMarkIcon className="w-4 h-4" />
                       )}
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>

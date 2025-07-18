@@ -39,7 +39,8 @@ export default async function WeeklyPage({
     { data: dailySummaries },
     { data: hourlyPatterns },
     { data: weekComparison },
-    { data: insights }
+    { data: insights },
+    { data: userSettings }
   ] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any).rpc('get_daily_study_summary', {
@@ -67,8 +68,19 @@ export default async function WeeklyPage({
       end_date: format(weekEndInUserTz, 'yyyy-MM-dd'),
       p_user_id: user.id,
       p_timezone: userTimezone
-    })
+    }),
+    supabase
+      .from('user_settings')
+      .select('study_goals')
+      .eq('user_id', user.id)
+      .single()
   ])
+
+  // 일일 목표 시간 계산 (주간 목표를 7로 나눔)
+  const studyGoals = userSettings?.study_goals as { weekly_goal_minutes?: number } | null
+  const dailyGoalMinutes = studyGoals?.weekly_goal_minutes 
+    ? Math.round(studyGoals.weekly_goal_minutes / 7)
+    : 240 // 기본값 4시간
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
@@ -89,6 +101,7 @@ export default async function WeeklyPage({
           hourlyPatterns={hourlyPatterns || []}
           weekComparison={weekComparison || []}
           insights={insights?.[0] || null}
+          dailyGoalMinutes={dailyGoalMinutes}
         />
       </Suspense>
     </div>

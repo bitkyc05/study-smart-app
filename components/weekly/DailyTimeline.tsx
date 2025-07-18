@@ -15,11 +15,13 @@ interface DailyTimelineProps {
   weekStart: Date
   weekEnd: Date
   dailySummaries: DailySummary[]
+  dailyGoalMinutes: number
 }
 
 export default function DailyTimeline({ 
   weekStart, 
-  dailySummaries 
+  dailySummaries,
+  dailyGoalMinutes 
 }: Omit<DailyTimelineProps, 'weekEnd'>) {
   const [todayString, setTodayString] = useState('')
   
@@ -120,12 +122,12 @@ export default function DailyTimeline({
                       <div 
                         className="bg-blue-500 h-full rounded-full transition-all duration-300"
                         style={{ 
-                          width: `${Math.min((summary.total_minutes / 240) * 100, 100)}%` 
+                          width: `${Math.min((summary.total_minutes / dailyGoalMinutes) * 100, 100)}%` 
                         }}
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1 text-center">
-                      {Math.round((summary.total_minutes / 240) * 100)}%
+                      {Math.round((summary.total_minutes / dailyGoalMinutes) * 100)}%
                     </p>
                   </div>
                 )}

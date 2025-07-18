@@ -37,6 +37,7 @@ interface WeeklyViewProps {
     most_productive_hour: number | null
     longest_session_minutes: number
   } | null
+  dailyGoalMinutes: number
 }
 
 export default function WeeklyView({
@@ -45,7 +46,8 @@ export default function WeeklyView({
   dailySummaries,
   hourlyPatterns,
   weekComparison,
-  insights
+  insights,
+  dailyGoalMinutes
 }: WeeklyViewProps) {
   return (
     <div className="space-y-6">
@@ -73,6 +75,7 @@ export default function WeeklyView({
       <DailyTimeline 
         weekStart={weekStart} 
         dailySummaries={dailySummaries}
+        dailyGoalMinutes={dailyGoalMinutes}
       />
     </div>
   )
