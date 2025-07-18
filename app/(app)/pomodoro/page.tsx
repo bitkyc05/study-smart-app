@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { PomodoroTimer } from '@/components/pomodoro/PomodoroTimer'
 import { createClient } from '@/lib/supabase/client'
+import { usePomodoroStore } from '@/store/usePomodoroStore'
 
 interface Subject {
   id: number
@@ -28,6 +29,9 @@ export default function PomodoroPage() {
   const [todaySessions, setTodaySessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedSubjects, setExpandedSubjects] = useState<Set<number | 'etc'>>(new Set())
+  
+  // 포모도로 상태 가져오기
+  const pomodoroState = usePomodoroStore(state => state.state)
 
   useEffect(() => {
     fetchSubjects()
@@ -148,7 +152,8 @@ export default function PomodoroPage() {
               <select
                 value={selectedSubjectId || ''}
                 onChange={(e) => setSelectedSubjectId(e.target.value ? Number(e.target.value) : null)}
-                className="w-full px-4 py-3 pr-10 rounded-lg border-2 border-accent hover:border-accent-focus focus:border-accent-focus focus:outline-none appearance-none bg-background text-text-primary cursor-pointer text-center font-serif text-heading-md"
+                disabled={pomodoroState !== 'idle'}
+                className="w-full px-4 py-3 pr-10 rounded-lg border-2 border-accent hover:border-accent-focus focus:border-accent-focus focus:outline-none appearance-none bg-background text-text-primary cursor-pointer text-center font-serif text-heading-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-accent"
               >
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>

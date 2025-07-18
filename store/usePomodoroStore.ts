@@ -148,8 +148,14 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
         workerRef?.postMessage({ command: 'resume' })
       },
       
-      reset: () => {
+      reset: async () => {
         const { workerRef, settings, sessionType, state } = get()
+        
+        // 작동 중인 상태에서만 reset 가능
+        if (state === 'idle') return
+        
+        // Worker에 즉시 reset 명령 전송
+        workerRef?.postMessage({ command: 'reset' })
         
         // 세션 생성 전이므로 아무 처리도 하지 않음
         // 설정시간 전에 종료하면 세션이 기록되지 않음
@@ -160,31 +166,34 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
                                     settings.autoStartBreakOnStudyStop
         
         if (shouldAutoStartBreak) {
-          // 휴식 자동 시작
+          // 상태 초기화 후 휴식 자동 시작
+          await new Promise(resolve => setTimeout(resolve, 100)) // Worker 상태 초기화 대기
           get().actions.startBreak()
         } else {
+          const initialDuration = settings.studyDuration
+          const initialAngle = (initialDuration / 3600) * 360
+          
           set({
             state: 'idle',
-            timeRemaining: settings.studyDuration,
+            timeRemaining: initialDuration,
             overtimeElapsed: 0,
-            dialAngle: 0,
+            dialAngle: initialAngle,
             completedRings: 0,
-            currentRingAngle: 0,
+            currentRingAngle: initialAngle,
             currentSessionId: null,
             sessionStartTime: undefined // 시작 시간 초기화
           })
-          
-          workerRef?.postMessage({ command: 'reset' })
         }
       },
       
       stop: async () => {
         const { state, sessionType, overtimeElapsed, settingDuration, currentSessionId, workerRef, timeRemaining } = get()
         
-        // 휴식 중이거나 초과시간 상태일 때만 stop 가능
-        if (!(sessionType === 'break' && state === 'countdown') && 
-            state !== 'overtime' && 
-            state !== 'breakOvertime') return
+        // 작동 중인 상태에서만 stop 가능 (idle 상태 제외)
+        if (state === 'idle') return
+        
+        // 학습 중 stop은 불가능 (overtime 제외)
+        if (sessionType === 'study' && state !== 'overtime') return
         
         // 휴식 중이면 경과시간 계산, 초과시간이면 기존 로직
         const totalDuration = sessionType === 'break' && state === 'countdown' 
@@ -256,6 +265,7 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
             currentSessionId: null
           })
           
+          // Worker에 stop 명령 전송
           workerRef?.postMessage({ command: 'stop' })
         }
       },
@@ -431,22 +441,43 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
       
       initializeWorker: () => {
         if (typeof window !== 'undefined' && !get().workerRef) {
-          // Next.js에서 Worker를 정적 분석 가능하게 만들기 위한 방법
-          const workerUrl = new URL('/pomodoro-worker.js', window.location.origin).href
-          const worker = new Worker(workerUrl)
-          
-          worker.onmessage = (e) => {
-            get().actions.handleWorkerMessage(e.data)
+          try {
+            // Turbopack 호환을 위한 정적 경로 사용
+            const worker = new Worker('/pomodoro-worker.js', { type: 'classic' })
+            
+            worker.onmessage = (e) => {
+              get().actions.handleWorkerMessage(e.data)
+            }
+            
+            worker.onerror = (error) => {
+              console.error('Worker error:', error)
+              set({ state: 'idle' })
+            }
+            
+            console.log('Worker initialized')
+            
+            set({ workerRef: worker })
+          } catch (error) {
+            console.error('Failed to initialize worker:', error)
+            // Fallback: URL 방식 시도 (프로덕션용)
+            try {
+              const workerUrl = new URL('/pomodoro-worker.js', window.location.origin).href
+              const worker = new Worker(workerUrl)
+              
+              worker.onmessage = (e) => {
+                get().actions.handleWorkerMessage(e.data)
+              }
+              
+              worker.onerror = (error) => {
+                console.error('Worker error:', error)
+                set({ state: 'idle' })
+              }
+              
+              set({ workerRef: worker })
+            } catch (fallbackError) {
+              console.error('Worker initialization failed completely:', fallbackError)
+            }
           }
-          
-          worker.onerror = (error) => {
-            console.error('Worker error:', error)
-            set({ state: 'idle' })
-          }
-          
-          console.log('Worker initialized')
-          
-          set({ workerRef: worker })
         }
       },
 
