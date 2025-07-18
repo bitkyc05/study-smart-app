@@ -24,6 +24,82 @@ export class ChatSessionService {
       sortOrder = 'desc' 
     } = options;
 
+    // 검색어가 있으면 새 RPC 함수 사용
+    if (filter.search) {
+      const offset = (page - 1) * limit;
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc('search_chat_sessions_with_content', {
+        p_user_id: userId,
+        p_search_text: filter.search,
+        p_folder_id: filter.folderId || null,
+        p_is_archived: filter.isArchived || false,
+        p_limit: limit,
+        p_offset: offset
+      });
+      
+      // count 처리 - 별도 쿼리로
+      const { count } = await supabase
+        .from('ai_chat_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .or(`title.ilike.%${filter.search}%,summary.ilike.%${filter.search}%`);
+
+      if (error) throw error;
+
+      // 태그와 즐겨찾기 정보 가져오기
+      let sessions: ChatSessionWithRelations[] = [];
+      if (data && data.length > 0) {
+        const sessionIds = data.map((s: Record<string, unknown>) => s.id);
+        
+        // 태그 정보 조회
+        const { data: sessionTags } = await supabase
+          .from('chat_session_tags')
+          .select(`
+            session_id,
+            chat_tags(id, name, color)
+          `)
+          .in('session_id', sessionIds);
+
+        // 즐겨찾기 정보 조회
+        const { data: favorites } = await supabase
+          .from('chat_favorites')
+          .select('session_id')
+          .eq('user_id', userId)
+          .in('session_id', sessionIds);
+
+        const favoriteSet = new Set(favorites?.map(f => f.session_id) || []);
+
+        sessions = data.map((session: Record<string, unknown>) => 
+          this.transformSession(session, sessionTags || [], favoriteSet)
+        );
+
+        // 태그 필터링
+        if (filter.tags && filter.tags.length > 0) {
+          const tagFilterSet = new Set(filter.tags);
+          sessions = sessions.filter(session => {
+            const sessionTagIds = sessionTags
+              ?.filter(st => st.session_id === session.id)
+              .map(st => st.chat_tags?.id)
+              .filter(Boolean) || [];
+            return sessionTagIds.some(tagId => tagFilterSet.has(tagId));
+          });
+        }
+
+        // 즐겨찾기 필터
+        if (filter.isFavorite) {
+          sessions = sessions.filter(s => s.isFavorite);
+        }
+      }
+
+      return {
+        sessions,
+        total: count || 0,
+        hasMore: (count || 0) > offset + limit
+      };
+    }
+
+    // 검색어가 없으면 기존 쿼리 사용
     let query = supabase
       .from('ai_chat_sessions')
       .select(`
@@ -32,13 +108,6 @@ export class ChatSessionService {
         chat_favorites!left(user_id)
       `, { count: 'exact' })
       .eq('user_id', userId);
-
-    // 검색어 필터
-    if (filter.search) {
-      query = query.or(
-        `title.ilike.%${filter.search}%,summary.ilike.%${filter.search}%`
-      );
-    }
 
     // 폴더 필터
     if (filter.folderId !== undefined) {

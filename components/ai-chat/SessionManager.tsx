@@ -34,6 +34,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useAIChatStore } from '@/store/useAIChatStore';
+import { cn } from '@/lib/utils';
 import { APIKeyService } from '@/lib/services/api-key-service';
 import { createClient } from '@/lib/supabase/client';
 
@@ -872,13 +873,44 @@ export default function SessionManager({
   // 사이드바 모드
   if (mode === 'sidebar') {
     return (
-      <aside className={`flex flex-col bg-accent/20 border-l-2 border-accent transition-all duration-300 overflow-hidden shadow-md ${
-        isOpen ? 'w-80' : 'w-0'
-      }`}>
+      <>
+        {/* 모바일 오버레이 */}
+        {isOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => {
+              if (useAIChatStore.getState().setSidebarOpen) {
+                useAIChatStore.getState().setSidebarOpen(false);
+              }
+            }}
+          />
+        )}
+        
+        {/* 사이드바 */}
+        <aside 
+          className={cn(
+            "flex flex-col bg-accent/20 border-l-2 border-accent shadow-md transition-all duration-300",
+            "fixed lg:relative right-0 top-0 h-full lg:h-auto z-50",
+            isOpen 
+              ? "w-full sm:w-80" 
+              : "w-2 lg:w-0 overflow-hidden" // 모바일에서는 w-2로 border 표시
+          )}
+        >
         {isOpen && (
           <>
             {/* 헤더 */}
-            <div className="flex-none p-4 border-b border-accent bg-background/50">
+            <div className="flex-none p-4 border-b border-accent bg-background/50 relative">
+              {/* 모바일 닫기 버튼 */}
+              <button
+                onClick={() => {
+                  if (useAIChatStore.getState().setSidebarOpen) {
+                    useAIChatStore.getState().setSidebarOpen(false);
+                  }
+                }}
+                className="absolute top-4 right-4 p-2 hover:bg-accent-light rounded-lg lg:hidden"
+              >
+                <X className="w-5 h-5" />
+              </button>
               <button
                 onClick={() => {
                   if (!userId) {
@@ -887,7 +919,7 @@ export default function SessionManager({
                   }
                   setShowNewSessionDialog(true);
                 }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-focus transition-colors font-medium"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-focus transition-colors font-medium lg:pr-4 pr-12"
               >
                 <Plus className="w-4 h-4" />
                 <span>새 대화 시작</span>
@@ -1018,6 +1050,7 @@ export default function SessionManager({
           </div>
         )}
       </aside>
+      </>
     );
   }
 

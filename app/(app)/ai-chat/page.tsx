@@ -35,6 +35,20 @@ export default function AIChatPage() {
     ['esc', () => setShowSettings(false)]
   ]);
 
+  // 모바일에서 사이드바 자동 닫기
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024 && isSidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // 초기 실행
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarOpen, setSidebarOpen]);
+
   return (
     <div className="h-[calc(100vh-theme(spacing.24))]">
       <ChatLayout>
@@ -45,6 +59,7 @@ export default function AIChatPage() {
               onSettingsClick={() => setShowSettings(true)}
             />
           </div>
+          
           
           {/* 사이드바 - 세션 관리 (오른쪽) */}
           {userId && (
@@ -62,8 +77,8 @@ export default function AIChatPage() {
           <button
             onClick={() => setSidebarOpen(!isSidebarOpen)}
             className={cn(
-              "absolute top-20 bg-background border border-accent rounded-full p-1 shadow-sm hover:bg-accent-light transition-all z-50",
-              isSidebarOpen ? "right-80 -translate-x-3" : "right-4"
+              "fixed lg:absolute top-20 bg-background border border-accent rounded-full p-1 shadow-sm hover:bg-accent-light transition-all z-[60]",
+              isSidebarOpen ? "right-2 lg:right-80 lg:-translate-x-3" : "right-2 lg:right-4"
             )}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
