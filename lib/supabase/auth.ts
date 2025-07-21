@@ -67,7 +67,7 @@ export async function signInWithGoogle() {
       redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/auth/callback`,
       queryParams: {
         access_type: 'offline',
-        prompt: 'consent',
+        prompt: 'select_account', // 계정 선택 화면 강제 표시
       },
     }
   })
