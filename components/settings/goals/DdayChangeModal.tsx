@@ -100,7 +100,7 @@ export default function DdayChangeModal({
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 py-2 px-4 bg-color-warning text-white rounded-lg hover:bg-opacity-90 transition-colors"
+              className="flex-1 py-2 px-4 bg-color-warning text-gray-900 font-medium rounded-lg hover:bg-opacity-90 transition-colors border border-color-warning"
             >
               Confirm Change
             </button>

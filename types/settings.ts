@@ -76,7 +76,7 @@ export interface SubjectAllocationSectionProps {
 
 export interface DdayChangeModalProps {
   isOpen: boolean;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   currentDday: string | null;
   newDday: Date;

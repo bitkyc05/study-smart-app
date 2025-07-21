@@ -64,10 +64,12 @@ export default function GoalsSettingsPage() {
     }
   }
 
-  const handleConfirmDdayChange = () => {
+  const handleConfirmDdayChange = async () => {
     if (tempDday) {
       confirmDdayChange()
       setIsModalOpen(false)
+      // Auto-save the changes immediately after confirming D-day change
+      await saveSettings()
     }
   }
 
