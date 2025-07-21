@@ -4,7 +4,7 @@ import ChatInput from './ChatInput';
 import EmptyState from './EmptyState';
 import { Settings, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { APIKeyService } from '@/lib/services/api-key-service';
 

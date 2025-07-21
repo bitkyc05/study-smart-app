@@ -27,10 +27,27 @@ export async function GET(request: NextRequest) {
       }
     )
     
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     
-    if (!error) {
+    if (!error && data?.user) {
+      console.log('OAuth login successful for user:', data.user.email)
+      
+      // 프로필이 자동으로 생성되었는지 확인
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single()
+      
+      if (profileError) {
+        console.error('Profile check error:', profileError)
+      } else {
+        console.log('Profile exists for user:', data.user.id)
+      }
+      
       return response
+    } else if (error) {
+      console.error('Code exchange error:', error)
     }
   }
 
