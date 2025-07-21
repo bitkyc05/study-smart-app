@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       console.log('OAuth login successful for user:', data.user.email)
       
       // 프로필이 자동으로 생성되었는지 확인
-      const { data: profile, error: profileError } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', data.user.id)

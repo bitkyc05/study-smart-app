@@ -17,9 +17,9 @@ export async function POST() {
       message: 'Successfully signed out',
       redirect: '/login'
     })
-  } catch (error: any) {
+  } catch (error) {
     // Handle NEXT_REDIRECT error as success
-    if (error?.digest?.includes('NEXT_REDIRECT')) {
+    if (error instanceof Error && 'digest' in error && typeof error.digest === 'string' && error.digest.includes('NEXT_REDIRECT')) {
       return NextResponse.json({ 
         message: 'Successfully signed out',
         redirect: '/login'

@@ -57,7 +57,6 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
   const [models, setModels] = useState<Record<string, string[]>>({});
   const [loadingModels, setLoadingModels] = useState<string | null>(null);
   const [customModel, setCustomModel] = useState('');
-  const [keyUpdateCounter, setKeyUpdateCounter] = useState(0);
   const [modelsFetchedAt, setModelsFetchedAt] = useState<Record<string, number>>({});
 
   const currentSettings = providerSettings[selectedProvider] || {
@@ -199,7 +198,7 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
 
   // When provider changes, fetch models only if not cached
   useEffect(() => {
-    if (selectedProvider && hasApiKey[selectedProvider] && selectedProvider !== 'custom') {
+    if (selectedProvider && hasApiKey(selectedProvider) && selectedProvider !== 'custom') {
       // Only fetch if we don't have cached models
       if (!models[selectedProvider] || models[selectedProvider].length === 0) {
         fetchModelsForProvider(selectedProvider);
@@ -289,7 +288,7 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
                   {Object.entries(PROVIDER_OPTIONS).map(([key, provider]) => {
                     const Icon = provider.icon;
                     const isSelected = selectedProvider === key;
-                    const hasKey = hasApiKey[key as keyof typeof PROVIDER_OPTIONS];
+                    const hasKey = hasApiKey(key);
                     
                     return (
                       <button
@@ -381,10 +380,10 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
                 <select
                   value={currentSettings.model}
                   onChange={(e) => handleSettingChange('model', e.target.value)}
-                  disabled={!hasApiKey[selectedProvider] || loadingModels === selectedProvider}
+                  disabled={!hasApiKey(selectedProvider) || loadingModels === selectedProvider}
                   className="w-full px-3 py-2 pr-8 bg-muted rounded-lg appearance-none outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {!hasApiKey[selectedProvider] ? (
+                  {!hasApiKey(selectedProvider) ? (
                     <option value="">API key unavailable</option>
                   ) : loadingModels === selectedProvider ? (
                     <option value="">모델 목록 불러오는 중...</option>
@@ -488,7 +487,6 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
                   userId={userId} 
                   onKeyUpdate={() => {
                     refreshKeys(); // Refresh central API keys state
-                    setKeyUpdateCounter(prev => prev + 1);
                   }}
                   onModelRefresh={(provider) => fetchModelsForProvider(provider, true)}
                 />

@@ -4,7 +4,7 @@ import ChatInput from './ChatInput';
 import EmptyState from './EmptyState';
 import { Settings, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useApiKeys } from '@/hooks/useApiKeys';
 
@@ -55,42 +55,22 @@ function CurrentSessionInfo() {
   const [loadingModels, setLoadingModels] = useState<string | null>(null);
   
   const supabase = createClient();
-  const { apiKeys } = useApiKeys(userId);
+  useApiKeys(userId); // Hook 호출만 유지 (effect 실행을 위해)
   const availableProviders = getAvailableProviders();
 
-  const PROVIDER_OPTIONS = {
+  const PROVIDER_OPTIONS = useMemo(() => ({
     openai: { name: 'OpenAI', defaultModels: ['o3-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'] },
     anthropic: { name: 'Anthropic', defaultModels: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'] },
     google: { name: 'Google', defaultModels: ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-pro', 'gemini-pro-vision'] },
     grok: { name: 'Grok', defaultModels: ['grok-1'] },
     custom: { name: 'Custom', defaultModels: [] }
-  };
+  }), []);
 
   // 세션이 없을 때도 기본 프로바이더 설정 표시
   const defaultProvider = availableProviders.length > 0 ? availableProviders[0] : 'openai';
   const currentProvider = currentSession?.provider || defaultProvider;
   const currentProviderSettings = providerSettings[currentProvider];
   const currentModels = models[currentProvider] || PROVIDER_OPTIONS[currentProvider as keyof typeof PROVIDER_OPTIONS]?.defaultModels || [];
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    fetchUser();
-  }, [supabase]);
-
-  useEffect(() => {
-    // 현재 프로바이더의 API 키가 없으면 첫 번째 사용 가능한 프로바이더로 변경
-    if (currentSession && !availableProviders.includes(currentSession.provider) && availableProviders.length > 0) {
-      updateSession(currentSession.id, { provider: availableProviders[0] });
-      // 모델 목록 가져오기
-      fetchModelsForProvider(availableProviders[0]);
-    } else if (currentSession && availableProviders.includes(currentSession.provider)) {
-      // 현재 프로바이더의 모델 목록 가져오기
-      fetchModelsForProvider(currentSession.provider);
-    }
-  }, [currentSession?.id, availableProviders.length]);
 
   const fetchModelsForProvider = useCallback(async (provider: string) => {
     if (provider === 'custom') return;
@@ -123,7 +103,27 @@ function CurrentSessionInfo() {
     } finally {
       setLoadingModels(null);
     }
-  }, [supabase, setModels, setLoadingModels]);
+  }, [supabase, setModels, setLoadingModels, PROVIDER_OPTIONS]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    fetchUser();
+  }, [supabase]);
+
+  useEffect(() => {
+    // 현재 프로바이더의 API 키가 없으면 첫 번째 사용 가능한 프로바이더로 변경
+    if (currentSession && !availableProviders.includes(currentSession.provider) && availableProviders.length > 0) {
+      updateSession(currentSession.id, { provider: availableProviders[0] });
+      // 모델 목록 가져오기
+      fetchModelsForProvider(availableProviders[0]);
+    } else if (currentSession && availableProviders.includes(currentSession.provider)) {
+      // 현재 프로바이더의 모델 목록 가져오기
+      fetchModelsForProvider(currentSession.provider);
+    }
+  }, [currentSession?.id, availableProviders.length, availableProviders, currentSession, fetchModelsForProvider, updateSession]);
 
   // Watch for provider changes and fetch models
   useEffect(() => {
