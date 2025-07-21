@@ -17,7 +17,7 @@
 - **📱 반응형 UI**: 모든 디바이스에서 최적화된 사용자 경험
 
 ## 🛠️ 기술 스택
-
+dd
 - **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
 - **Backend**: Supabase (PostgreSQL, Authentication, Real-time)
 - **State Management**: Zustand
