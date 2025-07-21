@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
+    // Create a new NextResponse first
     const response = NextResponse.redirect(`${origin}${next}`)
     
     const supabase = createServerClient(
@@ -20,7 +21,14 @@ export async function GET(request: NextRequest) {
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options)
+              // Ensure secure cookie settings for production
+              const cookieOptions = {
+                ...options,
+                sameSite: 'lax' as const,
+                secure: process.env.NODE_ENV === 'production',
+                httpOnly: true,
+              }
+              response.cookies.set(name, value, cookieOptions)
             })
           },
         },
@@ -45,7 +53,16 @@ export async function GET(request: NextRequest) {
         console.log('Profile exists for user:', data.user.id)
       }
       
-      return response
+      // Get the session to ensure it's properly set
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session) {
+        console.log('Session confirmed, redirecting to:', next)
+        return response
+      } else {
+        console.error('Session not found after code exchange')
+        return NextResponse.redirect(`${origin}/login?error=session_not_created`)
+      }
     } else if (error) {
       console.error('Code exchange error:', error)
     }
