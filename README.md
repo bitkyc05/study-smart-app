@@ -11,15 +11,13 @@
 - **🗓️ 캘린더 뷰**: 월별 히트맵 및 일일 학습 기록
 - **🏆 프로필 & 게임화**: 레벨 시스템, 뱃지, 학습 분석
 - **⚙️ 개인화 설정**: D-day 설정, 목표 시간 관리, 과목별 시간 배분
-
-ddd
 - **🌍 타임존 지원**: 전 세계 시간대 완벽 지원
 - **⏱️ 타이머 설정**: 사용자 맞춤 시간 설정 및 Auto-Start 옵션
 - **🔐 인증 시스템**: Supabase 기반 사용자 인증
 - **📱 반응형 UI**: 모든 디바이스에서 최적화된 사용자 경험
 
 ## 🛠️ 기술 스택
-dd
+
 - **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
 - **Backend**: Supabase (PostgreSQL, Authentication, Real-time)
 - **State Management**: Zustand
