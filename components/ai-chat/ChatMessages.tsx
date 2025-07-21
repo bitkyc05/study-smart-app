@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAIChatStore } from '@/store/useAIChatStore';
 import MessageItem from './MessageItem';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,9 @@ export default function ChatMessages({ className }: ChatMessagesProps) {
     updateMessage,
     setStreamingMessageId
   } = useAIChatStore();
-  const messages = activeSessionId ? allMessages[activeSessionId] || [] : [];
+  const messages = useMemo(() => {
+    return activeSessionId ? allMessages[activeSessionId] || [] : [];
+  }, [activeSessionId, allMessages]);
   const supabase = createClient();
 
   // 자동 스크롤
@@ -150,7 +152,7 @@ export default function ChatMessages({ className }: ChatMessagesProps) {
       setRegeneratingMessageId(null);
       setStreamingMessageId(null);
     }
-  }, [activeSessionId, messages, sessions, providerSettings, updateMessage, setStreamingMessageId, supabase]);
+  }, [activeSessionId, messages, sessions, providerSettings, updateMessage, setStreamingMessageId, supabase, regeneratingMessageId]);
 
   return (
     <div 

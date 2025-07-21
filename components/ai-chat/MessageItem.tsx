@@ -49,7 +49,7 @@ const MessageItem = memo(function MessageItem({
       };
       fetchFiles();
     }
-  }, [message.metadata?.fileContexts]);
+  }, [message.metadata?.fileContexts, supabase]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);

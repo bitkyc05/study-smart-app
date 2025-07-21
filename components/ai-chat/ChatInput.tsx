@@ -46,7 +46,7 @@ export default function ChatInput({ className }: ChatInputProps) {
       }
     };
     getUser();
-  }, []);
+  }, [supabase]);
 
   // 자동 높이 조절
   useEffect(() => {

@@ -7,6 +7,8 @@ import { TodayRadialChart } from '@/components/charts/TodayRadialChart'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { DdayProgressChart } from '@/components/charts/DdayProgressChart'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const stats = await getDashboardStats()
 

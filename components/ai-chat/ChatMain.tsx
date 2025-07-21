@@ -78,7 +78,7 @@ function CurrentSessionInfo() {
       setUserId(user?.id || null);
     };
     fetchUser();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     if (!userId) return;
@@ -100,17 +100,9 @@ function CurrentSessionInfo() {
     };
 
     checkApiKeys();
-  }, [userId, currentSession?.id]);
+  }, [userId, currentSession?.id, keyService, updateSession]);
 
-  // Watch for provider changes and fetch models
-  useEffect(() => {
-    if (currentProvider && availableProviders.includes(currentProvider) && !models[currentProvider]) {
-      console.log(`[ChatMain] Provider changed to ${currentProvider}, fetching models...`);
-      fetchModelsForProvider(currentProvider);
-    }
-  }, [currentProvider, availableProviders]);
-
-  const fetchModelsForProvider = async (provider: string) => {
+  const fetchModelsForProvider = useCallback(async (provider: string) => {
     if (provider === 'custom') return;
     
     console.log(`[ChatMain] Fetching models for provider: ${provider}`);
@@ -141,7 +133,15 @@ function CurrentSessionInfo() {
     } finally {
       setLoadingModels(null);
     }
-  };
+  }, [supabase, setModels, setLoadingModels]);
+
+  // Watch for provider changes and fetch models
+  useEffect(() => {
+    if (currentProvider && availableProviders.includes(currentProvider) && !models[currentProvider]) {
+      console.log(`[ChatMain] Provider changed to ${currentProvider}, fetching models...`);
+      fetchModelsForProvider(currentProvider);
+    }
+  }, [currentProvider, availableProviders, models, fetchModelsForProvider]);
 
   const handleProviderChange = async (newProvider: string) => {
     console.log(`[ChatMain] Provider changed to: ${newProvider}`);
