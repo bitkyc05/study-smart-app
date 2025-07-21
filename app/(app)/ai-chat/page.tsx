@@ -9,6 +9,7 @@ import ChatSettings from '@/components/ai-chat/ChatSettings';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { useApiKeys } from '@/hooks/useApiKeys';
 
 export default function AIChatPage() {
   const [showSettings, setShowSettings] = useState(false);
@@ -26,6 +27,9 @@ export default function AIChatPage() {
     };
     getUser();
   }, [supabase]);
+  
+  // API 키 로딩 중앙 관리
+  useApiKeys(userId);
   
   // 키보드 단축키
   useHotkeys([

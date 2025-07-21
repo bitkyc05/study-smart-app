@@ -6,7 +6,7 @@ import { Settings, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { APIKeyService } from '@/lib/services/api-key-service';
+import { useApiKeys } from '@/hooks/useApiKeys';
 
 interface ChatMainProps {
   onSettingsClick: () => void;
@@ -47,16 +47,16 @@ export default function ChatMain({ onSettingsClick, className }: ChatMainProps) 
 
 // 현재 세션 정보
 function CurrentSessionInfo() {
-  const { sessions, activeSessionId, providerSettings, updateSession, setProviderSettings } = useAIChatStore();
+  const { sessions, activeSessionId, providerSettings, updateSession, setProviderSettings, getAvailableProviders } = useAIChatStore();
   const currentSession = sessions.find(s => s.id === activeSessionId);
-  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const [models, setModels] = useState<Record<string, string[]>>({});
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingModels, setLoadingModels] = useState<string | null>(null);
   
   const supabase = createClient();
-  const keyService = new APIKeyService(supabase);
+  const { apiKeys } = useApiKeys(userId);
+  const availableProviders = getAvailableProviders();
 
   const PROVIDER_OPTIONS = {
     openai: { name: 'OpenAI', defaultModels: ['o3-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'] },
@@ -81,26 +81,16 @@ function CurrentSessionInfo() {
   }, [supabase]);
 
   useEffect(() => {
-    if (!userId) return;
-
-    const checkApiKeys = async () => {
-      const keys = await keyService.getUserKeys(userId);
-      const activeProviders = keys.filter(k => k.is_active).map(k => k.provider);
-      setAvailableProviders(activeProviders);
-
-      // 현재 프로바이더의 API 키가 없으면 첫 번째 사용 가능한 프로바이더로 변경
-      if (currentSession && !activeProviders.includes(currentSession.provider) && activeProviders.length > 0) {
-        updateSession(currentSession.id, { provider: activeProviders[0] });
-        // 모델 목록 가져오기
-        await fetchModelsForProvider(activeProviders[0]);
-      } else if (currentSession && activeProviders.includes(currentSession.provider)) {
-        // 현재 프로바이더의 모델 목록 가져오기
-        await fetchModelsForProvider(currentSession.provider);
-      }
-    };
-
-    checkApiKeys();
-  }, [userId, currentSession?.id, keyService, updateSession]);
+    // 현재 프로바이더의 API 키가 없으면 첫 번째 사용 가능한 프로바이더로 변경
+    if (currentSession && !availableProviders.includes(currentSession.provider) && availableProviders.length > 0) {
+      updateSession(currentSession.id, { provider: availableProviders[0] });
+      // 모델 목록 가져오기
+      fetchModelsForProvider(availableProviders[0]);
+    } else if (currentSession && availableProviders.includes(currentSession.provider)) {
+      // 현재 프로바이더의 모델 목록 가져오기
+      fetchModelsForProvider(currentSession.provider);
+    }
+  }, [currentSession?.id, availableProviders.length]);
 
   const fetchModelsForProvider = useCallback(async (provider: string) => {
     if (provider === 'custom') return;

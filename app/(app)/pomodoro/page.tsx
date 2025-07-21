@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { PomodoroTimer } from '@/components/pomodoro/PomodoroTimer'
 import { createClient } from '@/lib/supabase/client'
+import { usePomodoroStore } from '@/store/usePomodoroStore'
 
 interface Subject {
   id: number
@@ -28,6 +29,10 @@ export default function PomodoroPage() {
   const [todaySessions, setTodaySessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedSubjects, setExpandedSubjects] = useState<Set<number | 'etc'>>(new Set())
+  
+  // Get timer state and sessionType to disable dropdown during study
+  const timerState = usePomodoroStore(state => state.state)
+  const sessionType = usePomodoroStore(state => state.sessionType)
 
   useEffect(() => {
     fetchSubjects()

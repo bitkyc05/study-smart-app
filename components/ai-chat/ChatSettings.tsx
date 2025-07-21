@@ -4,7 +4,7 @@ import { X, ChevronDown, Settings, Key, Loader2, Bot, Brain, Sparkles, Code2, Co
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import APIKeyManager from './APIKeyManager';
-import { APIKeyService } from '@/lib/services/api-key-service';
+import { useApiKeys } from '@/hooks/useApiKeys';
 
 interface ChatSettingsProps {
   isOpen: boolean;
@@ -47,7 +47,7 @@ const PROVIDER_OPTIONS = {
 };
 
 export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
-  const { providerSettings, setProviderSettings, activeSessionId, sessions, updateSession } = useAIChatStore();
+  const { providerSettings, setProviderSettings, activeSessionId, sessions, updateSession, hasApiKey } = useAIChatStore();
   const activeSession = sessions.find(s => s.id === activeSessionId);
   const [selectedProvider, setSelectedProvider] = useState<keyof typeof PROVIDER_OPTIONS>(
     (activeSession?.provider as keyof typeof PROVIDER_OPTIONS) || 'openai'
@@ -56,7 +56,6 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
   const [userId, setUserId] = useState<string | null>(null);
   const [models, setModels] = useState<Record<string, string[]>>({});
   const [loadingModels, setLoadingModels] = useState<string | null>(null);
-  const [hasApiKey, setHasApiKey] = useState<Record<string, boolean>>({});
   const [customModel, setCustomModel] = useState('');
   const [keyUpdateCounter, setKeyUpdateCounter] = useState(0);
   const [modelsFetchedAt, setModelsFetchedAt] = useState<Record<string, number>>({});
@@ -68,7 +67,7 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
     customUrl: ''
   };
   const supabase = createClient();
-  const keyService = new APIKeyService(supabase);
+  const { refreshKeys } = useApiKeys(userId);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -103,25 +102,7 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
     }
   }, [models, modelsFetchedAt]);
 
-  // Check for API keys only (no automatic model fetching)
-  useEffect(() => {
-    if (!userId) return;
-
-    const checkApiKeys = async () => {
-      const keys = await keyService.getUserKeys(userId);
-      const keyMap: Record<string, boolean> = {};
-      
-      for (const provider of Object.keys(PROVIDER_OPTIONS)) {
-        const hasKey = keys.some(k => k.provider === provider && k.is_active);
-        keyMap[provider] = hasKey;
-      }
-      
-      setHasApiKey(keyMap);
-    };
-
-    checkApiKeys();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, keyUpdateCounter]); // Removed refreshTrigger
+  // No need for separate API key checking - use store state
 
   const fetchModelsForProvider = async (provider: string, forceRefresh = false) => {
     if (!userId) return;
@@ -505,7 +486,10 @@ export default function ChatSettings({ isOpen, onClose }: ChatSettingsProps) {
               {userId ? (
                 <APIKeyManager 
                   userId={userId} 
-                  onKeyUpdate={() => setKeyUpdateCounter(prev => prev + 1)}
+                  onKeyUpdate={() => {
+                    refreshKeys(); // Refresh central API keys state
+                    setKeyUpdateCounter(prev => prev + 1);
+                  }}
                   onModelRefresh={(provider) => fetchModelsForProvider(provider, true)}
                 />
               ) : (

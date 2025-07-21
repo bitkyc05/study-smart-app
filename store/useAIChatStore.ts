@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ChatSession, ChatMessage, ProcessedFile, ProviderSettings } from '@/types/ai-chat.types';
+import type { APIKeyMetadata } from '@/lib/services/api-key-service';
 
 interface AIChatState {
   // Sessions
@@ -15,6 +16,11 @@ interface AIChatState {
   
   // Settings
   providerSettings: Record<string, ProviderSettings>; // provider -> settings
+  
+  // API Keys State
+  apiKeys: APIKeyMetadata[];
+  apiKeysLoading: boolean;
+  apiKeysLastFetch: number | null;
   
   // UI State
   isSidebarOpen: boolean;
@@ -40,6 +46,13 @@ interface AIChatState {
   setSidebarOpen: (open: boolean) => void;
   setLoading: (loading: boolean) => void;
   setStreamingMessageId: (messageId: string | null) => void;
+  
+  // API Keys Actions
+  setApiKeys: (keys: APIKeyMetadata[]) => void;
+  setApiKeysLoading: (loading: boolean) => void;
+  setApiKeysLastFetch: (timestamp: number | null) => void;
+  getAvailableProviders: () => string[];
+  hasApiKey: (provider: string) => boolean;
   
   // Computed
   getActiveSession: () => ChatSession | undefined;
@@ -83,6 +96,9 @@ export const useAIChatStore = create<AIChatState>()(
           customUrl: '',
         },
       },
+      apiKeys: [],
+      apiKeysLoading: false,
+      apiKeysLastFetch: null,
       isSidebarOpen: true,
       isLoading: false,
       streamingMessageId: null,
@@ -175,6 +191,23 @@ export const useAIChatStore = create<AIChatState>()(
       setSidebarOpen: (open) => set({ isSidebarOpen: open }),
       setLoading: (loading) => set({ isLoading: loading }),
       setStreamingMessageId: (messageId) => set({ streamingMessageId: messageId }),
+      
+      // API Keys Actions
+      setApiKeys: (keys) => set({ apiKeys: keys }),
+      setApiKeysLoading: (loading) => set({ apiKeysLoading: loading }),
+      setApiKeysLastFetch: (timestamp) => set({ apiKeysLastFetch: timestamp }),
+      
+      getAvailableProviders: () => {
+        const state = get();
+        return state.apiKeys
+          .filter(key => key.is_active)
+          .map(key => key.provider);
+      },
+      
+      hasApiKey: (provider) => {
+        const state = get();
+        return state.apiKeys.some(key => key.provider === provider && key.is_active);
+      },
       
       // Computed
       getActiveSession: () => {
