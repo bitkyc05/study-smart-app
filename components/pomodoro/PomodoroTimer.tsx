@@ -126,7 +126,11 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               Pause
             </Button>
             <Button 
-              onClick={reset}
+              onClick={() => {
+                if (confirm('Are you sure you want to reset the timer? Current progress will be lost.')) {
+                  reset()
+                }
+              }}
               variant="ghost"
               className="flex items-center gap-2"
               size="lg"
@@ -147,7 +151,11 @@ export function PomodoroTimer({ subjectId }: PomodoroTimerProps) {
               Resume
             </Button>
             <Button 
-              onClick={reset}
+              onClick={() => {
+                if (confirm('Are you sure you want to reset the timer? Current progress will be lost.')) {
+                  reset()
+                }
+              }}
               variant="ghost"
               className="flex items-center gap-2"
               size="lg"

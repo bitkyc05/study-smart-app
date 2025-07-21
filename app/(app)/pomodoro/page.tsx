@@ -145,6 +145,14 @@ export default function PomodoroPage() {
         <h2 className="font-serif text-heading-lg text-text-primary mb-4">
           Select Subject
         </h2>
+        {/* Show warning when timer is running */}
+        {sessionType === 'study' && timerState !== 'idle' && (
+          <div className="mb-4 p-3 bg-warning-light/20 border border-warning/30 rounded-lg">
+            <p className="text-body-sm text-warning-dark">
+              ⚠️ Subject cannot be changed while studying
+            </p>
+          </div>
+        )}
         <div className="max-w-md mx-auto">
           {isLoading ? (
             <div className="text-text-secondary">Loading...</div>
@@ -153,7 +161,12 @@ export default function PomodoroPage() {
               <select
                 value={selectedSubjectId || ''}
                 onChange={(e) => setSelectedSubjectId(e.target.value ? Number(e.target.value) : null)}
-                className="w-full px-4 py-3 pr-10 rounded-lg border-2 border-accent hover:border-accent-focus focus:border-accent-focus focus:outline-none appearance-none bg-background text-text-primary cursor-pointer text-center font-serif text-heading-md"
+                disabled={sessionType === 'study' && timerState !== 'idle'}
+                className={`w-full px-4 py-3 pr-10 rounded-lg border-2 ${
+                  sessionType === 'study' && timerState !== 'idle' 
+                    ? 'border-accent opacity-50 cursor-not-allowed bg-accent-light' 
+                    : 'border-accent hover:border-accent-focus focus:border-accent-focus cursor-pointer bg-background'
+                } focus:outline-none appearance-none text-text-primary text-center font-serif text-heading-md`}
               >
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
